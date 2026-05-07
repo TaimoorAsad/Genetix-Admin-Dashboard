@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* New color palette */
+  --sapphire: #4059ad;
+  --blue-grey: #6b9ac4;
+  --pearl-aqua: #97d8c4;
+  --platinum: #eff2f1;
+  
+  /* Legacy mappings for compatibility */
+  --background: #f5f7fa;
+  --foreground: #2d3748;
+  --card: #ffffff;
+  --accent: #4059ad;
+  --accent-hover: #344a8a;
+  --sidebar-bg: #f8f9fa;
+  --sidebar-active: #4059ad;
+  --text-primary: #2d3748;
+  --text-secondary: #718096;
+  --border-color: #e2e8f0;
+
+  /* Login component variables */
+  --color-bg: #101214;
+  --color-surface: #161A1D;
+  --color-muted-surface: #1D2125;
+  --color-border: #2C333A;
+  --color-text-secondary: #596773;
+  --color-text-primary: #C7D1DB;
+  --color-heading: #DEE4EA;
+  --spacing-6: 1.5rem;
+  --rounded-lg: 0.5rem;
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  --color-text-primary-rgb: 199, 209, 219;
+  --color-bg-2: #C7D1DB;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Login page effects */
+@keyframes login-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-glow {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes login-float {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.08;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.11;
+  }
+}
+
+@keyframes login-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.login-card {
+  animation: login-fade-in-up 0.5s ease-out forwards;
+}
+
+.login-bg-logo {
+  opacity: 0.12;
+  animation: login-float 8s ease-in-out infinite;
+}
+
+/* Hide scrollbars for animated sidebar while keeping scroll behavior by default */
+.sidebar-scroll {
+  scrollbar-width: none; /* Firefox */
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* When hovering the sidebar, show a thin scrollbar so admins know there is more content */
+.group\/sidebar:hover .sidebar-scroll {
+  scrollbar-width: thin; /* Firefox */
+}
+.group\/sidebar:hover .sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
