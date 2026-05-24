@@ -68,6 +68,8 @@ function franchiseReferralDisplay(
 
 const SEARCH_DEBOUNCE_MS = 350;
 
+type PageSize = "all" | "50" | "100" | "500";
+
 export default function UsersPage() {
   const { idToken } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -80,6 +82,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageFilter, setImageFilter] = useState<ImageStatus | "all-users">("all-users");
+  const [pageSize, setPageSize] = useState<PageSize>("50");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +105,7 @@ export default function UsersPage() {
     setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(page));
+    params.set("limit", pageSize);
     if (imageFilter !== "all-users") params.set("imageStatus", imageFilter);
     const url = `/api/users?${params.toString()}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
@@ -119,7 +123,7 @@ export default function UsersPage() {
     setTotalPages(data.totalPages || 1);
     setTotalUsers(data.totalUsers || 0);
     setLoading(false);
-  }, [idToken, imageFilter]);
+  }, [idToken, imageFilter, pageSize]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -131,7 +135,7 @@ export default function UsersPage() {
     if (!searchQuery.trim()) {
       setCurrentPage(1);
     }
-  }, [imageFilter, searchQuery]);
+  }, [imageFilter, searchQuery, pageSize]);
 
   useEffect(() => {
     const term = searchQuery.trim();
@@ -261,6 +265,22 @@ export default function UsersPage() {
             <option value="partial">Partial (Blue)</option>
             <option value="none">No Images (Red)</option>
           </select>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(e.target.value as PageSize);
+              if (currentPage !== 1) {
+                setCurrentPage(1);
+              }
+            }}
+            className="px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#2d3748] text-sm focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none min-w-[160px]"
+            aria-label="Users per page"
+          >
+            <option value="all">Show all</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+            <option value="500">500 per page</option>
+          </select>
         </div>
         {searchQuery.trim() && (
           <p className="text-sm text-[#718096]">
@@ -269,7 +289,11 @@ export default function UsersPage() {
         )}
         {!searchQuery.trim() && (
           <p className="text-sm text-[#718096]">
-            Page {currentPage} of {totalPages} • Showing {displayUsers.length} of {totalUsers} user(s)
+            {pageSize === "all" ? (
+              <>Showing all {displayUsers.length} of {totalUsers} user(s) • Sorted by date (newest first)</>
+            ) : (
+              <>Page {currentPage} of {totalPages} • Showing {displayUsers.length} of {totalUsers} user(s) • Sorted by date (newest first)</>
+            )}
             {imageFilter !== "all-users" && ` (${imageFilter === "all" ? "all images uploaded" : imageFilter === "partial" ? "partial images uploaded" : "no images uploaded"})`}
           </p>
         )}
@@ -415,7 +439,7 @@ export default function UsersPage() {
             </p>
           </div>
         )}
-        {!searchQuery.trim() && totalPages > 1 && (
+        {!searchQuery.trim() && pageSize !== "all" && totalPages > 1 && (
           <div className="p-4 bg-[#f8f9fa] border-t border-[#e2e8f0]">
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <button

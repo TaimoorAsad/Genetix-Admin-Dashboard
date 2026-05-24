@@ -51,6 +51,30 @@ function userMatchesSearch(data: Record<string, unknown>, query: string): boolea
   return name.includes(q) || email.includes(q) || phone.includes(q);
 }
 
+function registeredOnMs(val: unknown): number {
+  if (val == null) return 0;
+  if (val instanceof admin.firestore.Timestamp) return val.toMillis();
+  if (typeof val === "object" && "_seconds" in (val as object)) {
+    return (val as { _seconds: number })._seconds * 1000;
+  }
+  const d = new Date(String(val));
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function sortUsersByDateDesc<T extends { [key: string]: unknown }>(users: T[]): T[] {
+  return [...users].sort(
+    (a, b) => registeredOnMs(b["Registered On"]) - registeredOnMs(a["Registered On"])
+  );
+}
+
+function parsePageLimit(raw: string | null): number {
+  if (raw === "all") return 0;
+  if (!raw) return 50;
+  const n = Number(raw);
+  if (n === 50 || n === 100 || n === 500) return n;
+  return 50;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const authResult = await requireDashboardAuth(req);
@@ -85,10 +109,14 @@ export async function GET(req: NextRequest) {
         lastDoc = snapshot.docs[snapshot.docs.length - 1];
         if (snapshot.docs.length < BATCH_SIZE) break;
       }
-      return NextResponse.json({ users: results, nextLastId: null, fromSearch: true });
+      return NextResponse.json({
+        users: sortUsersByDateDesc(results),
+        nextLastId: null,
+        fromSearch: true,
+      });
     }
 
-    const limit = 50;
+    const limit = parsePageLimit(req.nextUrl.searchParams.get("limit"));
     const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1));
     const offset = (page - 1) * limit;
     const imageStatusParam = req.nextUrl.searchParams.get("imageStatus");
@@ -97,12 +125,14 @@ export async function GET(req: NextRequest) {
         ? (imageStatusParam as ImageStatus)
         : null;
 
+    const pageLimit = limit === 0 ? MAX_SCAN : limit;
+
     if (imageStatusFilter) {
       const allFiltered: { id: string; imageStatus: ImageStatus; [key: string]: unknown }[] = [];
       let lastDoc: admin.firestore.DocumentSnapshot | null = null;
       let totalScanned = 0;
       const MAX_SCAN_FOR_FILTER = 10000;
-      while (allFiltered.length < offset + limit && totalScanned < MAX_SCAN_FOR_FILTER) {
+      while (totalScanned < MAX_SCAN_FOR_FILTER) {
         let q: admin.firestore.Query = db.collection("users").limit(BATCH_SIZE);
         if (lastDoc) q = q.startAfter(lastDoc);
         const snapshot = await q.get();
@@ -119,21 +149,22 @@ export async function GET(req: NextRequest) {
         lastDoc = snapshot.docs[snapshot.docs.length - 1];
         if (snapshot.docs.length < BATCH_SIZE) break;
       }
-      const results = allFiltered.slice(offset, offset + limit);
-      const totalPages = Math.ceil(allFiltered.length / limit);
+      const sorted = sortUsersByDateDesc(allFiltered);
+      const results = sorted.slice(offset, offset + pageLimit);
+      const totalPages = limit === 0 ? 1 : Math.max(1, Math.ceil(sorted.length / pageLimit));
       return NextResponse.json({
         users: results,
-        page,
+        page: limit === 0 ? 1 : page,
         totalPages,
-        totalUsers: allFiltered.length,
-        hasMore: offset + limit < allFiltered.length,
+        totalUsers: sorted.length,
+        hasMore: limit !== 0 && offset + pageLimit < sorted.length,
       });
     }
 
     const allUsers: { id: string; imageStatus: ImageStatus; [key: string]: unknown }[] = [];
     let lastDoc: admin.firestore.DocumentSnapshot | null = null;
     let totalScanned = 0;
-    while (allUsers.length < offset + limit && totalScanned < MAX_SCAN) {
+    while (totalScanned < MAX_SCAN) {
       let q: admin.firestore.Query = db.collection("users").limit(BATCH_SIZE);
       if (lastDoc) q = q.startAfter(lastDoc);
       const snapshot = await q.get();
@@ -148,14 +179,15 @@ export async function GET(req: NextRequest) {
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
       if (snapshot.docs.length < BATCH_SIZE) break;
     }
-    const results = allUsers.slice(offset, offset + limit);
-    const totalPages = Math.ceil(allUsers.length / limit);
+    const sorted = sortUsersByDateDesc(allUsers);
+    const results = sorted.slice(offset, offset + pageLimit);
+    const totalPages = limit === 0 ? 1 : Math.max(1, Math.ceil(sorted.length / pageLimit));
     return NextResponse.json({
       users: results,
-      page,
+      page: limit === 0 ? 1 : page,
       totalPages,
-      totalUsers: allUsers.length,
-      hasMore: offset + limit < allUsers.length,
+      totalUsers: sorted.length,
+      hasMore: limit !== 0 && offset + pageLimit < sorted.length,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to fetch users";
