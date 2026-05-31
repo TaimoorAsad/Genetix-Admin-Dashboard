@@ -218,7 +218,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between dashboard-page-header">
         <h1 className="text-3xl font-bold text-[#2d3748]">Dashboard</h1>
         <div className="relative" ref={profileMenuRef}>
           <button
@@ -418,9 +418,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Total Revenue Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-[#e2e8f0] p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 dashboard-chart-header">
             <h3 className="text-[#2d3748] font-semibold">Total Revenue</h3>
-            <div className="flex gap-2">
+            <div className="flex gap-2 dashboard-chart-tabs">
               {(["day", "week", "month", "year"] as Period[]).map((p) => (
                 <button
                   key={p}
@@ -456,9 +456,9 @@ export default function DashboardPage() {
 
         {/* Pictures Completed Users Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-[#e2e8f0] p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 dashboard-chart-header">
             <h3 className="text-[#2d3748] font-semibold">Pictures Completed Users</h3>
-            <div className="flex gap-2">
+            <div className="flex gap-2 dashboard-chart-tabs">
               {(["day", "week", "month", "year"] as Period[]).map((p) => (
                 <button
                   key={p}
@@ -493,9 +493,9 @@ export default function DashboardPage() {
 
       {/* Client Onboarding Chart */}
       <div className="mt-8 bg-white rounded-lg shadow-sm border border-[#e2e8f0] p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 dashboard-chart-header">
             <h3 className="text-[#2d3748] font-semibold">Client onboarding</h3>
-            <div className="flex gap-2">
+            <div className="flex gap-2 dashboard-chart-tabs">
               {(["day", "week", "month", "year"] as Period[]).map((p) => (
                 <button
                   key={p}

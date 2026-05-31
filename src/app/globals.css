@@ -115,3 +115,65 @@ body {
   width: 6px;
   height: 6px;
 }
+
+/* Mobile dashboard — desktop (md+) unchanged */
+@media (max-width: 767px) {
+  .dashboard-content {
+    max-width: 100%;
+  }
+
+  .dashboard-content h1.text-3xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+
+  .dashboard-content .dashboard-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .dashboard-content .dashboard-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-content .dashboard-filters > input,
+  .dashboard-content .dashboard-filters > select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .dashboard-content .dashboard-table-scroll,
+  .dashboard-content .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .dashboard-content .dashboard-table-scroll::after,
+  .dashboard-content .overflow-x-auto::after {
+    content: "Swipe to see more →";
+    display: block;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: #a0aec0;
+    text-align: center;
+    background: linear-gradient(to right, transparent, #f8f9fa 20%);
+  }
+
+  .dashboard-content .dashboard-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .dashboard-content .dashboard-chart-tabs {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .dashboard-content .dashboard-card-panel {
+    padding: 1rem;
+  }
+}

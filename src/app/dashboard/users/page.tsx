@@ -66,6 +66,31 @@ function franchiseReferralDisplay(
   return { text: "—", title: "" };
 }
 
+function UserStatusBadge({ status }: { status: ImageStatus }) {
+  if (status === "all") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></span>
+        All
+      </span>
+    );
+  }
+  if (status === "partial") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#4059ad] shrink-0"></span>
+        Part
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+      None
+    </span>
+  );
+}
+
 const SEARCH_DEBOUNCE_MS = 350;
 
 type PageSize = "all" | "50" | "100" | "500";
@@ -215,14 +240,14 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex items-center justify-between gap-4 dashboard-page-header">
         <h1 className="text-3xl font-bold text-[#2d3748]">Users</h1>
         {selectedIds.size > 0 && (
           <button
             type="button"
             onClick={handleBulkDelete}
             disabled={bulkDeleting}
-            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition w-full md:w-auto"
           >
             {bulkDeleting ? "Deleting…" : `Delete selected (${selectedIds.size})`}
           </button>
@@ -239,14 +264,14 @@ export default function UsersPage() {
           )}
         </div>
       )}
-      <div className="bg-white rounded-lg shadow-sm border border-[#e2e8f0] p-6 mb-6">
-        <div className="flex flex-wrap gap-4 items-center mb-4">
+      <div className="bg-white rounded-lg shadow-sm border border-[#e2e8f0] p-4 md:p-6 mb-6 dashboard-card-panel">
+        <div className="flex flex-wrap gap-4 items-center mb-4 dashboard-filters">
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, email, or phone..."
-            className="flex-1 min-w-[200px] max-w-md rounded-lg bg-white border border-[#e2e8f0] px-4 py-2.5 text-[#2d3748] placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
+            className="flex-1 min-w-0 md:min-w-[200px] md:max-w-md rounded-lg bg-white border border-[#e2e8f0] px-4 py-2.5 text-[#2d3748] placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
             aria-label="Search users"
           />
           <select
@@ -258,7 +283,7 @@ export default function UsersPage() {
                 setCurrentPage(1);
               }
             }}
-            className="px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#2d3748] text-sm focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none min-w-[180px]"
+            className="w-full md:w-auto px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#2d3748] text-sm focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none md:min-w-[180px]"
           >
             <option value="all-users">All Users</option>
             <option value="all">All Images (Green)</option>
@@ -273,7 +298,7 @@ export default function UsersPage() {
                 setCurrentPage(1);
               }
             }}
-            className="px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#2d3748] text-sm focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none min-w-[160px]"
+            className="w-full md:w-auto px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#2d3748] text-sm focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none md:min-w-[160px]"
             aria-label="Users per page"
           >
             <option value="all">Show all</option>
@@ -299,7 +324,83 @@ export default function UsersPage() {
         )}
       </div>
       <div className="bg-white rounded-lg shadow-sm border border-[#e2e8f0] overflow-hidden">
-        <div className="min-w-0 overflow-x-auto">
+        {/* Mobile card list */}
+        <div className="md:hidden divide-y divide-[#e2e8f0]">
+          {displayUsers.map((u) => {
+            const status = u.imageStatus || "none";
+            const borderColor =
+              status === "all" ? "border-l-[#10b981]" : status === "partial" ? "border-l-[#4059ad]" : "border-l-[#ef4444]";
+            const franchiseRef = franchiseReferralDisplay(u, franchiseNameByNumber);
+            return (
+              <div key={u.id} className={`p-4 border-l-4 ${borderColor} bg-white`}>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 mt-1 shrink-0"
+                    aria-label={`Select ${String(u["Full Name"] ?? "user")}`}
+                    checked={selectedIds.has(u.id)}
+                    onChange={(e) => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(u.id);
+                        else next.delete(u.id);
+                        return next;
+                      });
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="font-medium text-[#2d3748] text-sm truncate">{u["Full Name"] ?? "—"}</p>
+                      <UserStatusBadge status={status} />
+                    </div>
+                    {u["Phone Number"] && (
+                      <p className="text-sm text-[#718096] truncate">{u["Phone Number"]}</p>
+                    )}
+                    {u.Email && (
+                      <p className="text-sm text-[#718096] truncate">{u.Email}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#718096]">
+                      <span>Refs: {u.ReferralCount ?? 0}</span>
+                      <span>Logins: {u.LoginCount ?? 0}</span>
+                      <span>{u.isEliteMember ? "Elite" : "Standard"}</span>
+                      {u["Registered On"] && (
+                        <span>
+                          {new Date(u["Registered On"]).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "2-digit",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {franchiseRef.text !== "—" && (
+                      <p className="mt-1 text-xs text-[#718096] truncate" title={franchiseRef.title || franchiseRef.text}>
+                        {franchiseRef.text}
+                      </p>
+                    )}
+                    <div className="mt-3 flex items-center gap-3">
+                      <Link
+                        href={`/dashboard/users/${u.id}/fingerprints`}
+                        className="text-[#4059ad] hover:text-[#344a8a] text-sm font-medium py-1"
+                      >
+                        View
+                      </Link>
+                      <Link
+                        href={`/dashboard/users/${u.id}`}
+                        className="text-[#4059ad] hover:text-[#344a8a] text-sm font-medium py-1"
+                      >
+                        Edit
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block min-w-0 overflow-x-auto dashboard-table-scroll">
           <table className="w-full text-left table-fixed">
             <colgroup>
               <col style={{ width: "3%" }} />
@@ -371,22 +472,7 @@ export default function UsersPage() {
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      {status === "all" ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></span>
-                          All
-                        </span>
-                      ) : status === "partial" ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#4059ad] shrink-0"></span>
-                          Part
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                          None
-                        </span>
-                      )}
+                      <UserStatusBadge status={status} />
                     </td>
                     <td className="px-3 py-2.5 text-[#2d3748] font-medium text-sm truncate" title={String(u["Full Name"] ?? "")}>{u["Full Name"] ?? "—"}</td>
                     <td className="px-3 py-2.5 text-[#718096] text-sm truncate" title={String(u["Phone Number"] ?? "")}>{u["Phone Number"] ?? "—"}</td>

@@ -140,7 +140,7 @@ export default function FranchisesPage() {
         <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>
       )}
       <div className="bg-white rounded-lg shadow-sm border border-[#e2e8f0] overflow-hidden">
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto dashboard-table-scroll">
           <table className="w-full text-left min-w-[560px]">
             <thead className="bg-[#f8f9fa] border-b border-[#e2e8f0]">
               <tr>

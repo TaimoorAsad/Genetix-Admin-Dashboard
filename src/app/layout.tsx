@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   description: "Admin panel for Genetix mobile application",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const dynamic = "force-dynamic";
 
 export default function RootLayout({

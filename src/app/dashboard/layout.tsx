@@ -103,10 +103,10 @@ export default function DashboardLayout({
         : "/dashboard";
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-[#f5f7fa]">
+    <div className="h-[100dvh] flex flex-col md:flex-row bg-[#f5f7fa] overflow-hidden">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
         <SidebarBody className="justify-between gap-6">
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll">
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll min-h-0">
             <Link
               href={homeHref}
               className="flex items-center gap-3 mb-6 px-1 mt-1"
@@ -144,7 +144,7 @@ export default function DashboardLayout({
               ))}
             </div>
           </div>
-          <div className="border-t border-[#e2e8f0] pt-4 mt-4 opacity-0 translate-y-1 transition-all duration-200 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 pointer-events-none group-hover/sidebar:pointer-events-auto">
+          <div className="border-t border-[#e2e8f0] pt-4 mt-4 max-md:opacity-100 max-md:translate-y-0 max-md:pointer-events-auto md:opacity-0 md:translate-y-1 md:transition-all md:duration-200 md:group-hover/sidebar:opacity-100 md:group-hover/sidebar:translate-y-0 md:pointer-events-none md:group-hover/sidebar:pointer-events-auto">
             <p
               className="px-2 py-1 text-xs text-[#718096] truncate"
               title={user.email ?? ""}
@@ -169,8 +169,8 @@ export default function DashboardLayout({
           </div>
         </SidebarBody>
       </Sidebar>
-      <main className="flex-1 w-full md:h-screen overflow-y-auto bg-[#f5f7fa]">
-        <div className="p-6">{children}</div>
+      <main className="flex-1 w-full min-h-0 md:h-screen overflow-y-auto overflow-x-hidden bg-[#f5f7fa]">
+        <div className="dashboard-content p-4 md:p-6">{children}</div>
       </main>
     </div>
   );
