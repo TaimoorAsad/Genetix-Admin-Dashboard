@@ -26,9 +26,8 @@ function randomCode(length = 7): string {
 }
 
 function isValidCouponCode(code: string): boolean {
-  // Keep format consistent with generated codes: uppercase letters (no I/O) + digits (no 0/1).
-  // Length is intentionally short for manual entry.
-  return /^[A-HJ-NP-Z2-9]{4,12}$/.test(code);
+  // Relaxed verification to support arbitrary custom coupon codes.
+  return /^[A-Z0-9]{3,20}$/.test(code);
 }
 
 export async function GET(req: NextRequest) {

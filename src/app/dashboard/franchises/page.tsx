@@ -44,6 +44,61 @@ export default function FranchisesPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    number: "",
+    name: "",
+    email: "",
+    phone: "",
+    canEditFranchiseUsers: false,
+    canDeleteFranchiseUsers: false,
+  });
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const handleCreateFranchise = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!idToken) return;
+    if (!addForm.number.trim()) {
+      setAddError("Number / Referral code is required.");
+      return;
+    }
+    setAddSaving(true);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/franchises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          number: addForm.number.trim(),
+          name: addForm.name.trim(),
+          email: addForm.email.trim() || null,
+          phone: addForm.phone.trim() || null,
+          canEditFranchiseUsers: addForm.canEditFranchiseUsers,
+          canDeleteFranchiseUsers: addForm.canDeleteFranchiseUsers,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error || "Creation failed");
+      }
+      setAddForm({
+        number: "",
+        name: "",
+        email: "",
+        phone: "",
+        canEditFranchiseUsers: false,
+        canDeleteFranchiseUsers: false,
+      });
+      setShowAddModal(false);
+      load();
+    } catch (err: unknown) {
+      setAddError(err instanceof Error ? err.message : "Creation failed");
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
   const load = useCallback(() => {
     if (!idToken) return;
     fetch("/api/franchises", { headers: { Authorization: `Bearer ${idToken}` } })
@@ -135,7 +190,24 @@ export default function FranchisesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-[#2d3748] mb-6">Franchises</h1>
+      <div className="mb-6 flex items-center justify-between gap-4 dashboard-page-header">
+        <h1 className="text-3xl font-bold text-[#2d3748]">Franchises</h1>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => {
+              setAddError(null);
+              setShowAddModal(true);
+            }}
+            className="px-4 py-2.5 rounded-lg bg-[#4059ad] hover:bg-[#344a8a] text-white text-sm font-medium shadow-sm transition flex items-center justify-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Franchise
+          </button>
+        )}
+      </div>
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>
       )}
@@ -288,6 +360,105 @@ export default function FranchisesPage() {
           </div>
         )}
       </div>
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.target === e.currentTarget && !addSaving && setShowAddModal(false)}
+        >
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-[#e2e8f0] p-6">
+            <h3 className="text-lg font-semibold text-[#2d3748] mb-4">Add new franchise</h3>
+            {addError && (
+              <p className="text-sm text-red-600 mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{addError}</p>
+            )}
+            <form onSubmit={handleCreateFranchise} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Number / Referral code</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. +923001234567"
+                  className={inputCls}
+                  value={addForm.number}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, number: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Franchise name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lahore Branch"
+                  className={inputCls}
+                  value={addForm.name}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Email</label>
+                <input
+                  type="email"
+                  placeholder="e.g. owner@example.com"
+                  className={inputCls}
+                  value={addForm.email}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Phone</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. +923001234567"
+                  className={inputCls}
+                  value={addForm.phone}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[#2d3748]">
+                  <input
+                    type="checkbox"
+                    checked={addForm.canEditFranchiseUsers}
+                    onChange={(e) =>
+                      setAddForm((prev) => ({ ...prev, canEditFranchiseUsers: e.target.checked }))
+                    }
+                    className="rounded border-[#cbd5e0] text-[#4059ad] focus:ring-[#4059ad]/30"
+                  />
+                  Allow franchise login to edit users linked to this franchise
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[#2d3748]">
+                  <input
+                    type="checkbox"
+                    checked={addForm.canDeleteFranchiseUsers}
+                    onChange={(e) =>
+                      setAddForm((prev) => ({ ...prev, canDeleteFranchiseUsers: e.target.checked }))
+                    }
+                    className="rounded border-[#cbd5e0] text-[#4059ad] focus:ring-[#4059ad]/30"
+                  />
+                  Allow franchise login to delete users linked to this franchise
+                </label>
+              </div>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[#e2e8f0]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={addSaving}
+                  className="px-4 py-2 rounded-lg border border-[#e2e8f0] text-[#718096] text-sm font-medium hover:bg-[#f8f9fa] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addSaving}
+                  className="px-4 py-2 rounded-lg bg-[#4059ad] hover:bg-[#344a8a] text-white text-sm font-medium disabled:opacity-50 shadow-sm transition"
+                >
+                  {addSaving ? "Creating…" : "Create Franchise"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

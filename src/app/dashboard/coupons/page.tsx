@@ -69,8 +69,8 @@ export default function CouponsPage() {
       return;
     }
     const code = newCode.trim().toUpperCase();
-    if (code && !/^[A-HJ-NP-Z2-9]{4,12}$/.test(code)) {
-      setError("Invalid code. Use 4–12 chars: A–Z (excluding I/O) and 2–9.");
+    if (code && !/^[A-Z0-9]{3,20}$/.test(code)) {
+      setError("Invalid code. Use 3–20 alphanumeric characters (A–Z and 0–9).");
       return;
     }
     setSaving(true);
@@ -188,7 +188,7 @@ export default function CouponsPage() {
                   </button>
                 )}
               </div>
-              <p className="mt-1 text-xs text-[#718096]">Allowed: 4–12 chars, A–Z (excluding I/O) and 2–9.</p>
+              <p className="mt-1 text-xs text-[#718096]">Allowed: 3–20 alphanumeric characters (A–Z and 0–9).</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-[#4a5568] mb-1">Discount (%)</label>

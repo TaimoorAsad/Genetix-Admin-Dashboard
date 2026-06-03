@@ -113,6 +113,165 @@ export default function UsersPage() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [franchiseNameByNumber, setFranchiseNameByNumber] = useState<Map<string, string>>(() => new Map());
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    fullName: "",
+    email: "",
+    phoneNumber: "",
+    isEliteMember: false,
+    referralCode: "",
+    franchise: "",
+  });
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const handleExportExcel = async () => {
+    if (!idToken) return;
+    try {
+      const res = await fetch("/api/users?limit=all", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch all users data");
+      const data = await res.json();
+      const allUsers = data.users || [];
+      if (allUsers.length === 0) {
+        alert("No users data to export");
+        return;
+      }
+
+      const headers = [
+        "User ID",
+        "Full Name",
+        "Phone Number",
+        "Email",
+        "Registered On",
+        "Elite Member",
+        "Referral Count",
+        "Referral Points",
+        "Referral Code",
+        "Franchise",
+        "Login Count",
+        "Image Status",
+        "Father's Name",
+        "Mother's Name",
+        "Gender",
+        "Education",
+        "Place of Birth",
+        "Date of Birth",
+        "Time of Birth",
+        "Report Normal",
+        "Report Premium",
+        "Numerology Course",
+        "Graphology Course",
+        "Learn And Earn",
+        "Referral Paid",
+        "Submitted",
+      ];
+
+      const csvRows = [headers.join(",")];
+
+      const escapeCSV = (val: unknown) => {
+        if (val === undefined || val === null) return "";
+        const str = String(val);
+        if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      for (const u of allUsers) {
+        const row = [
+          escapeCSV(u.id),
+          escapeCSV(u["Full Name"]),
+          escapeCSV(u["Phone Number"]),
+          escapeCSV(u.Email),
+          escapeCSV(u["Registered On"]),
+          escapeCSV(u.isEliteMember ? "Yes" : "No"),
+          escapeCSV(u.ReferralCount),
+          escapeCSV(u.ReferralPoints),
+          escapeCSV(u.ReferralCode),
+          escapeCSV(u.Franchise),
+          escapeCSV(u.LoginCount),
+          escapeCSV(u.imageStatus),
+          escapeCSV(u["Father's Name"]),
+          escapeCSV(u["Mother's Name"]),
+          escapeCSV(u["Gender"]),
+          escapeCSV(u["Education"]),
+          escapeCSV(u["Place of Birth"]),
+          escapeCSV(u["Date of Birth"]),
+          escapeCSV(u["Time of Birth"]),
+          escapeCSV(u.ReportNormal ? "Yes" : "No"),
+          escapeCSV(u.ReportPremium ? "Yes" : "No"),
+          escapeCSV(u.NumerologyCourse ? "Yes" : "No"),
+          escapeCSV(u.GraphologyCourse ? "Yes" : "No"),
+          escapeCSV(u.LearnAndEarn ? "Yes" : "No"),
+          escapeCSV(u.ReferralPaid ? "Yes" : "No"),
+          escapeCSV(u.isSubmitted ? "Yes" : "No"),
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const csvContent = "\ufeff" + csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `users_export_${new Date().toISOString().split("T")[0]}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Export failed");
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!idToken) return;
+    if (!addForm.email.trim() && !addForm.phoneNumber.trim()) {
+      setAddError("At least Email or Phone Number is required.");
+      return;
+    }
+    setAddSaving(true);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          "Full Name": addForm.fullName.trim(),
+          Email: addForm.email.trim() || null,
+          "Phone Number": addForm.phoneNumber.trim() || null,
+          isEliteMember: addForm.isEliteMember,
+          ReferralCode: addForm.referralCode.trim(),
+          Franchise: addForm.franchise.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to create user");
+      }
+      setAddForm({
+        fullName: "",
+        email: "",
+        phoneNumber: "",
+        isEliteMember: false,
+        referralCode: "",
+        franchise: "",
+      });
+      setShowAddModal(false);
+      await load(currentPage);
+    } catch (err: unknown) {
+      setAddError(err instanceof Error ? err.message : "Failed to create user");
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
   const displayUsers = searchResults !== null ? searchResults : users;
 
   useEffect(() => {
@@ -240,18 +399,43 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-4 dashboard-page-header">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 dashboard-page-header">
         <h1 className="text-3xl font-bold text-[#2d3748]">Users</h1>
-        {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <button
             type="button"
-            onClick={handleBulkDelete}
-            disabled={bulkDeleting}
-            className="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition w-full md:w-auto"
+            onClick={handleExportExcel}
+            className="px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] hover:bg-[#f8f9fa] text-[#4a5568] text-sm font-medium shadow-sm transition w-full md:w-auto flex items-center justify-center gap-1.5"
           >
-            {bulkDeleting ? "Deleting…" : `Delete selected (${selectedIds.size})`}
+            <svg className="w-4 h-4 text-[#718096]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export Excel
           </button>
-        )}
+          <button
+            type="button"
+            onClick={() => {
+              setAddError(null);
+              setShowAddModal(true);
+            }}
+            className="px-4 py-2.5 rounded-lg bg-[#4059ad] hover:bg-[#344a8a] text-white text-sm font-medium shadow-sm transition w-full md:w-auto flex items-center justify-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add User
+          </button>
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition w-full md:w-auto"
+            >
+              {bulkDeleting ? "Deleting…" : `Delete selected (${selectedIds.size})`}
+            </button>
+          )}
+        </div>
       </div>
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
@@ -590,6 +774,105 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.target === e.currentTarget && !addSaving && setShowAddModal(false)}
+        >
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-[#e2e8f0] p-6">
+            <h3 className="text-lg font-semibold text-[#2d3748] mb-4">Add new user</h3>
+            {addError && (
+              <p className="text-sm text-red-600 mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{addError}</p>
+            )}
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
+                  value={addForm.fullName}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Phone Number (E.164 format)</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. +923001234567"
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none font-mono"
+                  value={addForm.phoneNumber}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                />
+                <p className="text-[10px] text-[#a0aec0] mt-0.5">Required if email is empty. Must include country code prefix (+).</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Email Address</label>
+                <input
+                  type="email"
+                  placeholder="e.g. john@example.com"
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
+                  value={addForm.email}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, email: e.target.value }))}
+                />
+                <p className="text-[10px] text-[#a0aec0] mt-0.5">Required if phone number is empty.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#718096] mb-1">Referral Code (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Referral Code"
+                    className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
+                    value={addForm.referralCode}
+                    onChange={(e) => setAddForm((prev) => ({ ...prev, referralCode: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#718096] mb-1">Franchise (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Franchise Number"
+                    className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
+                    value={addForm.franchise}
+                    onChange={(e) => setAddForm((prev) => ({ ...prev, franchise: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="add-elite"
+                  className="rounded border-[#e2e8f0] text-[#4059ad] focus:ring-[#4059ad]"
+                  checked={addForm.isEliteMember}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, isEliteMember: e.target.checked }))}
+                />
+                <label htmlFor="add-elite" className="text-sm font-medium text-[#2d3748] cursor-pointer">Elite member</label>
+              </div>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[#e2e8f0]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={addSaving}
+                  className="px-4 py-2 rounded-lg border border-[#e2e8f0] text-[#718096] text-sm font-medium hover:bg-[#f8f9fa] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addSaving}
+                  className="px-4 py-2 rounded-lg bg-[#4059ad] hover:bg-[#344a8a] text-white text-sm font-medium disabled:opacity-50 shadow-sm transition"
+                >
+                  {addSaving ? "Creating…" : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

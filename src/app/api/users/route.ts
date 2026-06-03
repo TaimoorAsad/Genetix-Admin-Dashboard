@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import { NextRequest, NextResponse } from "next/server";
-import { getFirestore } from "@/lib/firebase-admin";
-import { requireDashboardAuth, requireView } from "@/lib/api-auth";
+import { getFirestore, getAuth } from "@/lib/firebase-admin";
+import { requireDashboardAuth, requireView, requirePermission } from "@/lib/api-auth";
 
 const BATCH_SIZE = 500;
 const MAX_SCAN = 10000;
@@ -192,6 +192,68 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to fetch users";
     console.error(e);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const authResult = await requireDashboardAuth(req);
+    if ("error" in authResult) return authResult.error;
+    const permErr = requirePermission(authResult.auth, "canEditUsers");
+    if (permErr) return permErr;
+
+    const db = getFirestore();
+    const body = await req.json();
+
+    const fullName = String(body["Full Name"] ?? "").trim();
+    const email = String(body.Email ?? "").trim();
+    const phoneNumber = String(body["Phone Number"] ?? "").trim();
+    const isEliteMember = Boolean(body.isEliteMember);
+    const referralCode = String(body.ReferralCode ?? "").trim();
+    const franchise = String(body.Franchise ?? "").trim();
+
+    if (!email && !phoneNumber) {
+      return NextResponse.json({ error: "At least Email or Phone Number is required" }, { status: 400 });
+    }
+
+    const auth = getAuth();
+    const userRecord = await auth.createUser({
+      email: email || undefined,
+      phoneNumber: phoneNumber || undefined,
+      displayName: fullName || undefined,
+    });
+
+    const nowIso = new Date().toISOString();
+    const userData: Record<string, string | number | boolean> = {
+      "Full Name": fullName,
+      Email: email,
+      "Phone Number": phoneNumber,
+      isEliteMember,
+      "Registered On": nowIso,
+      ReferralCount: 0,
+      ReferralPoints: 0,
+      ReferralCode: referralCode,
+      Franchise: franchise,
+      LoginCount: 0,
+    };
+
+    await db.collection("users").doc(userRecord.uid).set(userData);
+
+    return NextResponse.json({ id: userRecord.uid, ...userData }, { status: 201 });
+  } catch (e: unknown) {
+    console.error("Failed to create user", e);
+    let message = "Failed to create user";
+    const err = e as { code?: string; message?: string };
+    if (err.code === "auth/email-already-exists") {
+      message = "Email is already in use by another account.";
+    } else if (err.code === "auth/phone-number-already-exists") {
+      message = "Phone number is already in use by another account.";
+    } else if (err.code === "auth/invalid-phone-number") {
+      message = "Invalid phone number. Use E.164 format (e.g. +923001234567).";
+    } else if (err.message) {
+      message = err.message;
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
