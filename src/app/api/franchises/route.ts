@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFirestore } from "@/lib/firebase-admin";
+import { getFirestore, getAuth } from "@/lib/firebase-admin";
 import { requireDashboardAuth, requireView, requirePermission } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
@@ -33,14 +33,46 @@ export async function POST(req: NextRequest) {
   if (permErr) return permErr;
   const db = getFirestore();
   const body = await req.json();
-  const { number, name, ...rest } = body;
+  const { number, name, email, password, ...rest } = body;
   if (!number) return NextResponse.json({ error: "number is required" }, { status: 400 });
+
+  const cleanPassword = typeof password === "string" ? password.trim() : "";
+  const cleanEmail = typeof email === "string" ? email.trim() : "";
+
+  if (cleanPassword && !cleanEmail) {
+    return NextResponse.json({ error: "Email is required to create a login account for this franchise." }, { status: 400 });
+  }
+
   try {
-    const ref = await db.collection("Franchises").add({ number: String(number), name: name || "", ...rest });
+    const franchiseData = {
+      number: String(number),
+      name: name || "",
+      email: cleanEmail || null,
+      ...rest
+    };
+
+    const ref = await db.collection("Franchises").add(franchiseData);
     const doc = await ref.get();
+
+    if (cleanPassword && cleanEmail) {
+      const auth = getAuth();
+      const userRecord = await auth.createUser({
+        email: cleanEmail,
+        password: cleanPassword,
+        displayName: name || undefined,
+      });
+
+      await db.collection("dashboardRoles").doc(userRecord.uid).set({
+        role: "franchise",
+        franchiseId: doc.id,
+        email: cleanEmail,
+      });
+    }
+
     return NextResponse.json({ id: doc.id, ...doc.data() });
-  } catch (e) {
+  } catch (e: unknown) {
     console.error(e);
-    return NextResponse.json({ error: "Failed to create franchise" }, { status: 500 });
+    const msg = e instanceof Error ? e.message : "Failed to create franchise";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

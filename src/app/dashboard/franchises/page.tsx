@@ -21,6 +21,7 @@ type EditForm = {
   phone: string;
   canEditFranchiseUsers: boolean;
   canDeleteFranchiseUsers: boolean;
+  password?: string;
 };
 
 export default function FranchisesPage() {
@@ -38,6 +39,7 @@ export default function FranchisesPage() {
     name: "",
     email: "",
     phone: "",
+    password: "",
     canEditFranchiseUsers: false,
     canDeleteFranchiseUsers: false,
   });
@@ -50,6 +52,7 @@ export default function FranchisesPage() {
     name: "",
     email: "",
     phone: "",
+    password: "",
     canEditFranchiseUsers: false,
     canDeleteFranchiseUsers: false,
   });
@@ -74,6 +77,7 @@ export default function FranchisesPage() {
           name: addForm.name.trim(),
           email: addForm.email.trim() || null,
           phone: addForm.phone.trim() || null,
+          password: addForm.password.trim() || null,
           canEditFranchiseUsers: addForm.canEditFranchiseUsers,
           canDeleteFranchiseUsers: addForm.canDeleteFranchiseUsers,
         }),
@@ -87,6 +91,7 @@ export default function FranchisesPage() {
         name: "",
         email: "",
         phone: "",
+        password: "",
         canEditFranchiseUsers: false,
         canDeleteFranchiseUsers: false,
       });
@@ -119,6 +124,7 @@ export default function FranchisesPage() {
       name: String(f.name ?? ""),
       email: String(f.email ?? ""),
       phone: String(f.phone ?? ""),
+      password: "",
       canEditFranchiseUsers: Boolean(f.canEditFranchiseUsers),
       canDeleteFranchiseUsers: Boolean(f.canDeleteFranchiseUsers),
     });
@@ -143,6 +149,7 @@ export default function FranchisesPage() {
           name: editForm.name.trim(),
           email: editForm.email.trim() || null,
           phone: editForm.phone.trim() || null,
+          password: editForm.password ? editForm.password.trim() : null,
           canEditFranchiseUsers: editForm.canEditFranchiseUsers,
           canDeleteFranchiseUsers: editForm.canDeleteFranchiseUsers,
         }),
@@ -301,6 +308,16 @@ export default function FranchisesPage() {
                                 placeholder="+923001234567"
                               />
                             </div>
+                            <div>
+                              <label className="block text-xs font-medium text-[#718096] mb-1">New Password (leave empty to keep current)</label>
+                              <input
+                                type="password"
+                                value={editForm.password || ""}
+                                onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                                className={inputCls}
+                                placeholder="Min 6 characters"
+                              />
+                            </div>
                             <div className="col-span-2 flex flex-wrap gap-6 pt-1">
                               <label className="flex items-center gap-2 cursor-pointer text-sm text-[#2d3748]">
                                 <input
@@ -413,6 +430,17 @@ export default function FranchisesPage() {
                   value={addForm.phone}
                   onChange={(e) => setAddForm((prev) => ({ ...prev, phone: e.target.value }))}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Password (to allow dashboard login)</label>
+                <input
+                  type="password"
+                  placeholder="Min 6 characters"
+                  className={inputCls}
+                  value={addForm.password}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, password: e.target.value }))}
+                />
+                <p className="text-[10px] text-[#a0aec0] mt-0.5">Required only if email is set, to create a dashboard account.</p>
               </div>
               <div className="flex flex-col gap-2 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-[#2d3748]">

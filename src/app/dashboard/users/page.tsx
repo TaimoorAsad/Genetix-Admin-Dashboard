@@ -96,7 +96,9 @@ const SEARCH_DEBOUNCE_MS = 350;
 type PageSize = "all" | "50" | "100" | "500";
 
 export default function UsersPage() {
-  const { idToken } = useAuth();
+  const { idToken, roleInfo } = useAuth();
+  const isAdmin = roleInfo?.role === "admin";
+  const canDelete = isAdmin || Boolean(roleInfo?.permissions?.canDeleteUsers);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserRow[] | null>(null);
@@ -269,6 +271,34 @@ export default function UsersPage() {
       setAddError(err instanceof Error ? err.message : "Failed to create user");
     } finally {
       setAddSaving(false);
+    }
+  };
+
+  const handleDeleteSingle = async (id: string) => {
+    if (!idToken) return;
+    if (!confirm("Delete this user? This will remove Firestore data and Auth account. This cannot be undone.")) return;
+    setError(null);
+    try {
+      const res = await fetch("/api/users/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ ids: [id] }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Delete failed (${res.status})`);
+      }
+      if (!searchQuery.trim()) {
+        await load(currentPage);
+      } else {
+        setSearchQuery("");
+        await load(1);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Delete failed");
     }
   };
 
@@ -575,6 +605,18 @@ export default function UsersPage() {
                       >
                         Edit
                       </Link>
+                      {canDelete && (
+                        <>
+                          <span className="text-[#e2e8f0]">|</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSingle(u.id)}
+                            className="text-red-600 hover:text-red-700 text-sm font-medium py-1"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -694,6 +736,18 @@ export default function UsersPage() {
                         >
                           Edit
                         </Link>
+                        {canDelete && (
+                          <>
+                            <span className="text-[#e2e8f0]">|</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSingle(u.id)}
+                              className="text-red-600 hover:text-red-700 text-xs font-medium"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
