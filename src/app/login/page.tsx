@@ -288,6 +288,23 @@ export default function LoginPage() {
               Make a new franchise
             </Link>
           </p>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/auth/reset-admin', { method: 'POST' });
+                  const data = await res.json();
+                  alert(data.message || data.error);
+                } catch (e: any) {
+                  alert(e.message);
+                }
+              }}
+              className="w-full py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-all duration-200"
+            >
+              Emergency Reset Admin Password
+            </button>
+          </div>
         </form>
       </div>
     </div>
