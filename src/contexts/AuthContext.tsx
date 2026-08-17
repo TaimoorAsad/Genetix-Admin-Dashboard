@@ -9,6 +9,7 @@ import {
   signOut as firebaseSignOut,
   signInWithPhoneNumber,
   RecaptchaVerifier,
+  sendPasswordResetEmail,
   type ConfirmationResult,
 } from "firebase/auth";
 import { getClientAuth } from "@/lib/firebase-client";
@@ -34,6 +35,7 @@ type AuthContextType = {
   /** Complete sign-in with the OTP code from SMS. Call after sendPhoneOtp. */
   confirmPhoneOtp: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   refreshToken: () => Promise<string | null>;
   refreshRoleInfo: () => Promise<void>;
 };
@@ -166,8 +168,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoleInfo(null);
   };
 
+  const resetPassword = async (email: string) => {
+    if (!auth) throw new Error("Firebase isn’t loaded.");
+    await sendPasswordResetEmail(auth, email);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, idToken, roleInfo, roleLoading, loading, signIn, signInWithGoogle, sendPhoneOtp, confirmPhoneOtp, signOut, refreshToken, refreshRoleInfo }}>
+    <AuthContext.Provider value={{ user, idToken, roleInfo, roleLoading, loading, signIn, signInWithGoogle, sendPhoneOtp, confirmPhoneOtp, signOut, resetPassword, refreshToken, refreshRoleInfo }}>
       {children}
     </AuthContext.Provider>
   );

@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
-  const { signIn, sendPhoneOtp, confirmPhoneOtp, signOut, user, roleInfo, roleLoading } = useAuth();
+  const { signIn, sendPhoneOtp, confirmPhoneOtp, signOut, resetPassword, user, roleInfo, roleLoading } = useAuth();
   const [phoneStep, setPhoneStep] = useState<"phone" | "otp">("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -292,17 +292,20 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={async () => {
+                if (!identifier.trim() || !identifier.includes("@")) {
+                  setError("Please enter a valid email address in the field above first.");
+                  return;
+                }
                 try {
-                  const res = await fetch('/api/auth/reset-admin', { method: 'POST' });
-                  const data = await res.json();
-                  alert(data.message || data.error);
-                } catch (e: any) {
-                  alert(e.message);
+                  await resetPassword(identifier.trim());
+                  alert("Password reset email sent! Check your inbox.");
+                } catch (err: any) {
+                  setError(err.message || "Failed to send reset email.");
                 }
               }}
-              className="w-full py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-all duration-200"
+              className="w-full py-2 rounded-xl text-slate-500 hover:text-slate-700 text-xs font-semibold transition-all duration-200 hover:bg-slate-50"
             >
-              Emergency Reset Admin Password
+              Forgot Password? Send Reset Email
             </button>
           </div>
         </form>
