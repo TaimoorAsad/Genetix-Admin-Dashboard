@@ -299,8 +299,8 @@ export default function LoginPage() {
                 try {
                   await resetPassword(identifier.trim());
                   alert("Password reset email sent! Check your inbox.");
-                } catch (err: any) {
-                  setError(err.message || "Failed to send reset email.");
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Failed to send reset email.");
                 }
               }}
               className="w-full py-2 rounded-xl text-slate-500 hover:text-slate-700 text-xs font-semibold transition-all duration-200 hover:bg-slate-50"
