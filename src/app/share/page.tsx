@@ -12,7 +12,7 @@ export default function SharePage() {
     // via App Links / Universal Links before the page even loads.
     // If it reaches this page, it means the app is likely not installed or it's on desktop.
     
-    const userAgent = navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera;
+    const userAgent = navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera || "";
 
     // Fallback URLs
     const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.brainvita.dmit';
