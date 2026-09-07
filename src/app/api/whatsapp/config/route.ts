@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json(doc.data());
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     await getFirestore().collection("appData").doc("whatsappConfig").set({ welcomeMessage }, { merge: true });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

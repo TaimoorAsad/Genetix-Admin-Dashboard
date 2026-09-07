@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import Image from "next/image";
+// Image import removed
 import { QRCodeSVG } from "qrcode.react";
 
 type WhatsAppStatus = {
@@ -30,7 +30,7 @@ export default function WhatsAppPage() {
       });
       const data = await res.json();
       setWaStatus(data);
-    } catch (err) {
+    } catch {
       setWaStatus({ status: "error", error: "Failed to connect to WhatsApp API" });
     } finally {
       setLoading(false);
@@ -46,8 +46,8 @@ export default function WhatsAppPage() {
         const data = await res.json();
         setWelcomeMessage(data.welcomeMessage || "");
       }
-    } catch (err) {
-      console.error("Failed to fetch config", err);
+    } catch {
+      console.error("Failed to fetch config");
     }
   };
 
@@ -58,6 +58,7 @@ export default function WhatsAppPage() {
       const interval = setInterval(fetchStatus, 5000); // Poll status
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idToken]);
 
   const showToast = (message: string, type: "success" | "error") => {
@@ -78,7 +79,7 @@ export default function WhatsAppPage() {
       });
       if (!res.ok) throw new Error("Failed to save");
       showToast("Welcome message saved successfully!", "success");
-    } catch (err) {
+    } catch {
       showToast("Error saving welcome message", "error");
     } finally {
       setSavingWelcome(false);
@@ -101,7 +102,7 @@ export default function WhatsAppPage() {
       const data = await res.json();
       showToast(`Broadcast queued for ${data.count} users!`, "success");
       setBroadcastMessage("");
-    } catch (err) {
+    } catch {
       showToast("Error sending broadcast", "error");
     } finally {
       setBroadcasting(false);
@@ -120,8 +121,7 @@ export default function WhatsAppPage() {
         body: JSON.stringify({ action }),
       });
       setTimeout(fetchStatus, 2000);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setLoading(false);
     }
   };

@@ -1,7 +1,8 @@
-import makeWASocket, { DisconnectReason, fetchLatestBaileysVersion, WASocket, BufferJSON, initAuthCreds, proto, AuthenticationState } from '@whiskeysockets/baileys';
+import makeWASocket, { DisconnectReason, fetchLatestBaileysVersion, BufferJSON, initAuthCreds, proto, AuthenticationState } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const globalAny: any = global;
 
 if (!globalAny.waState) {
@@ -26,7 +27,9 @@ export const getWhatsAppStatus = () => {
 
 import { getFirestore } from "@/lib/firebase-admin";
 
-const useFirestoreAuthState = async (collectionName: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void> }> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createFirestoreAuthState = async (collectionName: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void> }> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const writeData = async (data: any, id: string) => {
     const parsedData = JSON.stringify(data, BufferJSON.replacer);
     await getFirestore().collection(collectionName).doc(id).set({ data: parsedData });
@@ -50,7 +53,7 @@ const useFirestoreAuthState = async (collectionName: string): Promise<{ state: A
   const removeData = async (id: string) => {
     try {
       await getFirestore().collection(collectionName).doc(id).delete();
-    } catch (e) {}
+    } catch {}
   };
 
   const creds = await readData('creds') || initAuthCreds();
@@ -60,6 +63,7 @@ const useFirestoreAuthState = async (collectionName: string): Promise<{ state: A
       creds,
       keys: {
         get: async (type: string, ids: string[]) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const data: { [key: string]: any } = {};
           await Promise.all(
             ids.map(async (id) => {
@@ -72,6 +76,7 @@ const useFirestoreAuthState = async (collectionName: string): Promise<{ state: A
           );
           return data;
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         set: async (data: any) => {
           const tasks: Promise<void>[] = [];
           for (const category in data) {
@@ -145,12 +150,13 @@ export const startWhatsApp = async () => {
   globalAny.waState.errorMsg = undefined;
 
   try {
-    const { state, saveCreds } = await useFirestoreAuthState("whatsappAuth");
+    const { state, saveCreds } = await createFirestoreAuthState("whatsappAuth");
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log(`Using WA v${version.join('.')}, isLatest: ${isLatest}`);
 
     globalAny.waState.sock = makeWASocket({
       version,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       logger: pino({ level: 'silent' }) as any,
       printQRInTerminal: false,
       auth: state,
@@ -159,6 +165,7 @@ export const startWhatsApp = async () => {
 
     globalAny.waState.sock.ev.on('creds.update', saveCreds);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     globalAny.waState.sock.ev.on('connection.update', (update: any) => {
       const { connection, lastDisconnect, qr } = update;
 
@@ -201,7 +208,7 @@ export const startWhatsApp = async () => {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error starting WhatsApp:", error);
     globalAny.waState.status = "error";
     globalAny.waState.errorMsg = error?.message || "Unknown error";

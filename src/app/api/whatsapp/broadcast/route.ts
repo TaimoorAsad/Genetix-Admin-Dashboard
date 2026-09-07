@@ -18,9 +18,10 @@ export async function POST(req: Request) {
     }
 
     const sock = await getWASocket();
+    const db = getFirestore();
 
     // Fetch users based on target
-    let usersQuery = getFirestore().collection("users");
+    const usersQuery = db.collection("users");
     const snapshot = await usersQuery.get();
 
     let targetPhones: string[] = [];
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     });
 
     // Deduplicate
-    targetPhones = [...new Set(targetPhones)];
+    targetPhones = Array.from(new Set(targetPhones));
 
     // Send messages asynchronously so we don't block the request
     (async () => {
@@ -68,8 +69,8 @@ export async function POST(req: Request) {
     })();
 
     return NextResponse.json({ success: true, count: targetPhones.length });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error.message || "Failed" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error sending broadcast:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed" }, { status: 500 });
   }
 }
