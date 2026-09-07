@@ -36,6 +36,7 @@ const adminStaffNav = [
   { href: "/dashboard/points-and-usage", label: "Points & Usage", permission: "canViewAppData" as const, icon: <LineChart className="h-4 w-4 text-[#4a5568]" /> },
   { href: "/dashboard/about-us", label: "About Us", permission: "canViewAppData" as const, icon: <Info className="h-4 w-4 text-[#4a5568]" /> },
   { href: "/dashboard/permissions", label: "Staff permissions", adminOnly: true, icon: <ShieldCheck className="h-4 w-4 text-[#4a5568]" /> },
+  { href: "/dashboard/whatsapp", label: "WhatsApp", permission: "canViewAppData" as const, icon: <MessageCircleHeart className="h-4 w-4 text-[#4a5568]" /> },
 ];
 
 export default function DashboardLayout({

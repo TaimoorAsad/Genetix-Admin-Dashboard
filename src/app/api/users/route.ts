@@ -96,15 +96,24 @@ export async function GET(req: NextRequest) {
         if (lastDoc) q = q.startAfter(lastDoc);
         const snapshot = await q.get();
         if (snapshot.empty) break;
-        const statusPromises = snapshot.docs.map((doc) => getImageStatus(db, doc.id));
-        const statuses = await Promise.all(statusPromises);
+        // Find matching users FIRST
+        const matchingUsers = [];
         for (let i = 0; i < snapshot.docs.length; i++) {
           totalScanned++;
           const doc = snapshot.docs[i];
           const data = doc.data();
           if (userMatchesSearch(data, search)) {
-            results.push({ id: doc.id, imageStatus: statuses[i], ...data });
+            matchingUsers.push({ id: doc.id, data });
           }
+        }
+        
+        // THEN fetch status for matching users only
+        if (matchingUsers.length > 0) {
+          const statusPromises = matchingUsers.map((m) => getImageStatus(db, m.id));
+          const statuses = await Promise.all(statusPromises);
+          matchingUsers.forEach((m, i) => {
+            results.push({ id: m.id, imageStatus: statuses[i], ...m.data });
+          });
         }
         lastDoc = snapshot.docs[snapshot.docs.length - 1];
         if (snapshot.docs.length < BATCH_SIZE) break;
@@ -161,7 +170,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const allUsers: { id: string; imageStatus: ImageStatus; [key: string]: unknown }[] = [];
+    const allUsers: { id: string; [key: string]: unknown }[] = [];
     let lastDoc: admin.firestore.DocumentSnapshot | null = null;
     let totalScanned = 0;
     while (totalScanned < MAX_SCAN) {
@@ -169,18 +178,25 @@ export async function GET(req: NextRequest) {
       if (lastDoc) q = q.startAfter(lastDoc);
       const snapshot = await q.get();
       if (snapshot.empty) break;
-      const statusPromises = snapshot.docs.map((doc) => getImageStatus(db, doc.id));
-      const statuses = await Promise.all(statusPromises);
       for (let i = 0; i < snapshot.docs.length; i++) {
         totalScanned++;
         const doc = snapshot.docs[i];
-        allUsers.push({ id: doc.id, imageStatus: statuses[i], ...doc.data() });
+        allUsers.push({ id: doc.id, ...doc.data() });
       }
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
       if (snapshot.docs.length < BATCH_SIZE) break;
     }
     const sorted = sortUsersByDateDesc(allUsers);
-    const results = sorted.slice(offset, offset + pageLimit);
+    const resultsSubset = sorted.slice(offset, offset + pageLimit);
+    
+    // NOW fetch image status only for the subset
+    const statusPromises = resultsSubset.map(user => getImageStatus(db, user.id));
+    const statuses = await Promise.all(statusPromises);
+    
+    const results = resultsSubset.map((user, i) => ({
+      ...user,
+      imageStatus: statuses[i]
+    }));
     const totalPages = limit === 0 ? 1 : Math.max(1, Math.ceil(sorted.length / pageLimit));
     return NextResponse.json({
       users: results,
@@ -236,6 +252,7 @@ export async function POST(req: NextRequest) {
       ReferralCode: referralCode,
       Franchise: franchise,
       LoginCount: 0,
+      welcomeMessageSent: false,
     };
 
     await db.collection("users").doc(userRecord.uid).set(userData);

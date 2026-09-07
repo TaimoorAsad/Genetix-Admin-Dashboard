@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ["@whiskeysockets/baileys", "pino", "ws", "qrcode.react"],
+  },
+};
 
 export default nextConfig;
