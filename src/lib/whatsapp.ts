@@ -211,7 +211,7 @@ export const startWhatsApp = async () => {
   } catch (error: unknown) {
     console.error("Error starting WhatsApp:", error);
     globalAny.waState.status = "error";
-    globalAny.waState.errorMsg = error?.message || "Unknown error";
+    globalAny.waState.errorMsg = error instanceof Error ? error.message : "Unknown error";
     globalAny.waState.sock = null;
     if (globalAny.waState.listenerUnsubscribe) {
       globalAny.waState.listenerUnsubscribe();
