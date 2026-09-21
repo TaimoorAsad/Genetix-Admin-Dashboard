@@ -1,42 +1,45 @@
-"use client";
+import { getFirestore } from "@/lib/firebase-admin";
+import ShareClient from "./ShareClient";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+export const dynamic = "force-dynamic";
 
-export default function SharePage() {
-  const router = useRouter();
+interface SharePageProps {
+  searchParams: { [key: string]: string | string[] | undefined };
+}
 
-  useEffect(() => {
-    // The custom scheme URL to open the app (using intent or directly).
-    // If the app is installed, Android and iOS should intercept this automatically 
-    // via App Links / Universal Links before the page even loads.
-    // If it reaches this page, it means the app is likely not installed or it's on desktop.
-    
-    const userAgent = navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera || "";
+export default async function SharePage({ searchParams }: SharePageProps) {
+  const codeRaw = searchParams?.referralCode;
+  const referralCode =
+    typeof codeRaw === "string"
+      ? codeRaw.trim()
+      : Array.isArray(codeRaw) && typeof codeRaw[0] === "string"
+      ? codeRaw[0].trim()
+      : "";
 
-    // Fallback URLs
-    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.brainvita.dmit';
-    const appStoreUrl = 'https://apps.apple.com/app/id1498909115'; 
+  let playStoreUrl = "https://play.google.com/store/apps/details?id=com.brainvita.dmit";
+  let appStoreUrl = "https://apps.apple.com/app/id1498909115";
 
-    if (/android/i.test(userAgent)) {
-      window.location.replace(playStoreUrl);
-    } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as Window & { MSStream?: unknown }).MSStream) {
-      window.location.replace(appStoreUrl);
-    } else {
-      // Desktop or other - fallback to dashboard home
-      router.push('/');
+  try {
+    const db = getFirestore();
+    const doc = await db.collection("appData").doc("AppLink").get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (typeof data?.playStoreLink === "string" && data.playStoreLink.trim()) {
+        playStoreUrl = data.playStoreLink.trim();
+      }
+      if (typeof data?.appStoreLink === "string" && data.appStoreLink.trim()) {
+        appStoreUrl = data.appStoreLink.trim();
+      }
     }
-  }, [router]);
+  } catch (err) {
+    console.warn("Failed to fetch AppLink from firestore in /share page:", err);
+  }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 text-center">
-      <h2 className="text-2xl font-bold mb-4">Redirecting to Genetix App...</h2>
-      <p className="text-gray-600">
-        If you are not redirected automatically,{' '}
-        <a href="https://play.google.com/store/apps/details?id=com.brainvita.dmit" className="text-blue-600 underline">
-          click here
-        </a>.
-      </p>
-    </div>
+    <ShareClient
+      referralCode={referralCode}
+      playStoreUrl={playStoreUrl}
+      appStoreUrl={appStoreUrl}
+    />
   );
 }

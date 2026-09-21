@@ -106,11 +106,15 @@ export async function verifyTokenAndGetRole(
     if (userByUid.exists) {
       appUserId = uid;
     } else if (phone) {
-      const byPhone = await db.collection("users").where("Phone Number", "==", phone).limit(1).get();
+      let byPhone = await db.collection("users").where("Phone Number", "==", phone).limit(1).get();
+      if (byPhone.empty) byPhone = await db.collection("users").where("phoneNumber", "==", phone).limit(1).get();
+      if (byPhone.empty) byPhone = await db.collection("users").where("phone", "==", phone).limit(1).get();
       if (!byPhone.empty) appUserId = byPhone.docs[0].id;
     }
     if (!appUserId && appEmail) {
-      const byEmail = await db.collection("users").where("Email", "==", appEmail).limit(1).get();
+      let byEmail = await db.collection("users").where("email", "==", appEmail.toLowerCase()).limit(1).get();
+      if (byEmail.empty) byEmail = await db.collection("users").where("Email", "==", appEmail).limit(1).get();
+      if (byEmail.empty) byEmail = await db.collection("users").where("email", "==", appEmail).limit(1).get();
       if (!byEmail.empty) appUserId = byEmail.docs[0].id;
     }
     if (appUserId) {

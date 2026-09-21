@@ -83,6 +83,8 @@ async function main() {
   results.push(
     await ensureDoc(db, "appData", "AppLink", {
       link: "https://genetix.in",
+      playStoreLink: "https://play.google.com/store/apps/details?id=com.brainvita.dmit",
+      appStoreLink: "https://apps.apple.com/app/id1498909115",
       updatedAt: nowIso(),
     })
   );
