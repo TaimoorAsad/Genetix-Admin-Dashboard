@@ -50,25 +50,24 @@ export async function POST(req: Request) {
     // Deduplicate
     targetPhones = Array.from(new Set(targetPhones));
 
-    // Send messages asynchronously so we don't block the request
-    (async () => {
-      for (const phone of targetPhones) {
-        try {
-          // Check if number exists on WA
-          const jid = `${phone}@s.whatsapp.net`;
-          const [result] = await sock.onWhatsApp(jid);
-          if (result?.exists) {
-            await sock.sendMessage(jid, { text: message });
-            // Add a small delay to avoid rate limiting
-            await new Promise(r => setTimeout(r, 1000));
-          }
-        } catch (error) {
-          console.error(`Failed to send message to ${phone}`, error);
+    let sentCount = 0;
+    for (const phone of targetPhones) {
+      try {
+        // Check if number exists on WA
+        const jid = `${phone}@s.whatsapp.net`;
+        const [result] = await sock.onWhatsApp(jid);
+        if (result?.exists) {
+          await sock.sendMessage(jid, { text: message });
+          sentCount++;
+          // Rate limit delay between sends
+          await new Promise((r) => setTimeout(r, 600));
         }
+      } catch (error) {
+        console.error(`Failed to send message to ${phone}:`, error);
       }
-    })();
+    }
 
-    return NextResponse.json({ success: true, count: targetPhones.length });
+    return NextResponse.json({ success: true, count: sentCount, total: targetPhones.length });
   } catch (error: unknown) {
     console.error("Error sending broadcast:", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed" }, { status: 500 });

@@ -10,6 +10,7 @@ type WhatsAppStatus = {
   qr?: string;
   user?: { name: string; id: string };
   error?: string;
+  hasSavedSession?: boolean;
 };
 
 export default function WhatsAppPage() {
@@ -109,10 +110,10 @@ export default function WhatsAppPage() {
     }
   };
 
-  const triggerAction = async (action: "logout" | "restart") => {
+  const triggerAction = async (action: "logout" | "restart" | "reset") => {
     setLoading(true);
     try {
-      await fetch("/api/whatsapp/status", {
+      const res = await fetch("/api/whatsapp/status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +121,11 @@ export default function WhatsAppPage() {
         },
         body: JSON.stringify({ action }),
       });
-      setTimeout(fetchStatus, 2000);
+      const data = await res.json();
+      if (data.status) {
+        setWaStatus(data);
+      }
+      setTimeout(fetchStatus, 1500);
     } catch {
       setLoading(false);
     }
@@ -165,9 +170,12 @@ export default function WhatsAppPage() {
               {waStatus.status === "qr" && waStatus.qr && (
                 <>
                   <p className="text-sm text-[#718096] mb-2 text-center">Scan this QR code with your WhatsApp app to link devices.</p>
-                  <div className="p-4 bg-white border rounded-xl">
+                  <div className="p-4 bg-white border rounded-xl shadow-sm">
                     <QRCodeSVG value={waStatus.qr} size={200} />
                   </div>
+                  <button onClick={() => triggerAction("restart")} className="mt-2 text-xs text-[#4059ad] hover:underline font-medium">
+                    Refresh QR Code
+                  </button>
                 </>
               )}
 
@@ -176,8 +184,14 @@ export default function WhatsAppPage() {
                   <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600"></div>
                   </div>
-                  <h3 className="text-lg font-medium text-yellow-600">Connecting...</h3>
-                  <p className="text-sm text-[#718096]">Waiting for WhatsApp to initialize.</p>
+                  <h3 className="text-lg font-medium text-yellow-600">
+                    {waStatus.hasSavedSession ? "Auto-Connecting..." : "Connecting..."}
+                  </h3>
+                  <p className="text-sm text-[#718096] text-center max-w-xs">
+                    {waStatus.hasSavedSession
+                      ? `Saved session found for ${waStatus.user?.name || "linked account"}. Restoring connection...`
+                      : "Waiting for WhatsApp to initialize."}
+                  </p>
                 </>
               )}
 
@@ -188,9 +202,14 @@ export default function WhatsAppPage() {
                   </div>
                   <h3 className="text-lg font-medium text-red-600">Error</h3>
                   <p className="text-sm text-red-500 text-center">{waStatus.error}</p>
-                  <button onClick={() => triggerAction("restart")} className="mt-4 px-4 py-2 text-sm text-white bg-[#4059ad] rounded-lg hover:bg-[#344a8a] transition">
-                    Restart Connection
-                  </button>
+                  <div className="flex items-center gap-3 mt-4">
+                    <button onClick={() => triggerAction("restart")} className="px-4 py-2 text-sm text-white bg-[#4059ad] rounded-lg hover:bg-[#344a8a] transition">
+                      Restart Connection
+                    </button>
+                    <button onClick={() => triggerAction("reset")} className="px-4 py-2 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
+                      Reset & Scan New QR
+                    </button>
+                  </div>
                 </>
               )}
             </div>
