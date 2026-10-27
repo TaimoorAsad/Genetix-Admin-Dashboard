@@ -270,7 +270,13 @@ export const stopWhatsApp = async () => {
 };
 
 export const startWhatsApp = async () => {
-  if (globalAny.waState.isStarting || globalAny.waState.status === "connected") return;
+  if (
+    globalAny.waState.isStarting ||
+    globalAny.waState.status === "connected" ||
+    (globalAny.waState.status === "qr" && globalAny.waState.sock)
+  ) {
+    return;
+  }
   globalAny.waState.isStarting = true;
 
   globalAny.waState.status = "connecting";
@@ -411,9 +417,27 @@ export const ensureWhatsAppConnected = async (timeoutMs = 6000): Promise<boolean
     return true;
   }
 
-  if (globalAny.waState.status !== "connecting") {
-    startWhatsApp();
+  // If a QR code is already waiting to be scanned, keep the socket intact and do not regenerate
+  if (globalAny.waState.status === "qr" && globalAny.waState.sock) {
+    return false;
   }
+
+  // If already connecting or starting, wait for the connection to establish
+  if (globalAny.waState.status === "connecting" || globalAny.waState.isStarting) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (globalAny.waState.status === "connected" && globalAny.waState.sock) {
+        return true;
+      }
+      if (globalAny.waState.status === "qr" || globalAny.waState.status === "error") {
+        return false;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    return globalAny.waState.status === "connected";
+  }
+
+  startWhatsApp();
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
