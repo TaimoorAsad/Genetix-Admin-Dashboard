@@ -4,7 +4,9 @@ import { requireDashboardAuth, requirePermission, requireView } from "@/lib/api-
 
 type Coupon = {
   code: string;
-  discountPercent: number;
+  discountType: "percentage" | "absolute";
+  discountPercent?: number;
+  discountAmount?: number;
   active: boolean;
   expiresAt?: string | null;
   createdAt: string;
@@ -47,9 +49,16 @@ export async function GET(req: NextRequest) {
     const snap = await query.limit(200).get();
     const coupons: Coupon[] = snap.docs.map((d) => {
       const data = d.data() as Partial<Coupon> | undefined;
+      const rawType = data?.discountType;
+      const discountType: "percentage" | "absolute" =
+        rawType === "absolute" || (Number(data?.discountAmount || 0) > 0 && !data?.discountPercent)
+          ? "absolute"
+          : "percentage";
       return {
         code: String(data?.code || d.id).toUpperCase(),
+        discountType,
         discountPercent: Number(data?.discountPercent || 0),
+        discountAmount: Number(data?.discountAmount || 0),
         active: Boolean(data?.active ?? true),
         expiresAt: (data?.expiresAt as string | null | undefined) ?? null,
         createdAt: data?.createdAt || "",
@@ -74,18 +83,27 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const requestedCode = normalizeCode(body.code);
-    const discountPercent = Number(body.discountPercent);
+    const discountType: "percentage" | "absolute" =
+      body.discountType === "absolute" ? "absolute" : "percentage";
+    const discountPercent = Number(body.discountPercent || 0);
+    const discountAmount = Number(body.discountAmount || 0);
     const expiresAtRaw = body.expiresAt as string | null | undefined;
 
-    if (!Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent > 100) {
-      return NextResponse.json({ error: "discountPercent must be between 1 and 100" }, { status: 400 });
+    if (discountType === "percentage") {
+      if (!Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent > 100) {
+        return NextResponse.json({ error: "discountPercent must be between 1 and 100" }, { status: 400 });
+      }
+    } else {
+      if (!Number.isFinite(discountAmount) || discountAmount <= 0) {
+        return NextResponse.json({ error: "discountAmount must be a positive number greater than 0" }, { status: 400 });
+      }
     }
 
     let code = requestedCode;
     if (code) {
       if (!isValidCouponCode(code)) {
         return NextResponse.json(
-          { error: "Invalid code. Use 4–12 chars: A–Z (excluding I/O) and 2–9." },
+          { error: "Invalid code. Use 3–20 alphanumeric characters (A–Z and 0–9)." },
           { status: 400 }
         );
       }
@@ -122,7 +140,9 @@ export async function POST(req: NextRequest) {
 
     const coupon: Coupon = {
       code,
-      discountPercent,
+      discountType,
+      discountPercent: discountType === "percentage" ? discountPercent : 0,
+      discountAmount: discountType === "absolute" ? discountAmount : 0,
       active: true,
       expiresAt,
       createdAt: nowIso,
@@ -153,13 +173,30 @@ export async function PATCH(req: NextRequest) {
 
     const updates: Partial<Coupon> & { updatedAt?: string } = {};
     if (typeof body.active === "boolean") updates.active = body.active;
+
+    if (body.discountType !== undefined) {
+      if (body.discountType !== "percentage" && body.discountType !== "absolute") {
+        return NextResponse.json({ error: "discountType must be 'percentage' or 'absolute'" }, { status: 400 });
+      }
+      updates.discountType = body.discountType;
+    }
+
     if (body.discountPercent !== undefined) {
       const discountPercent = Number(body.discountPercent);
-      if (!Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent > 100) {
-        return NextResponse.json({ error: "discountPercent must be between 1 and 100" }, { status: 400 });
+      if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+        return NextResponse.json({ error: "discountPercent must be between 0 and 100" }, { status: 400 });
       }
       updates.discountPercent = discountPercent;
     }
+
+    if (body.discountAmount !== undefined) {
+      const discountAmount = Number(body.discountAmount);
+      if (!Number.isFinite(discountAmount) || discountAmount < 0) {
+        return NextResponse.json({ error: "discountAmount must be 0 or greater" }, { status: 400 });
+      }
+      updates.discountAmount = discountAmount;
+    }
+
     if (body.expiresAt !== undefined) {
       const expiresAtRaw = body.expiresAt as string | null;
       if (expiresAtRaw === null || expiresAtRaw === "") {

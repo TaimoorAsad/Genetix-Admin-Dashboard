@@ -5,7 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 type Coupon = {
   code: string;
-  discountPercent: number;
+  discountType: "percentage" | "absolute";
+  discountPercent?: number;
+  discountAmount?: number;
   active: boolean;
   expiresAt?: string | null;
   createdAt: string;
@@ -22,7 +24,8 @@ export default function CouponsPage() {
   const [saving, setSaving] = useState(false);
 
   const [newCode, setNewCode] = useState<string>("");
-  const [newDiscountPercent, setNewDiscountPercent] = useState<string>("");
+  const [newDiscountType, setNewDiscountType] = useState<"percentage" | "absolute">("percentage");
+  const [newDiscountValue, setNewDiscountValue] = useState<string>("");
   const [newExpiresAt, setNewExpiresAt] = useState<string>("");
 
   const generateCode = () => {
@@ -63,20 +66,39 @@ export default function CouponsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!idToken || !canEdit) return;
-    const discount = Number(newDiscountPercent);
-    if (!Number.isFinite(discount) || discount <= 0 || discount > 100) {
-      setError("Discount percent must be between 1 and 100.");
-      return;
+
+    const val = Number(newDiscountValue);
+    if (newDiscountType === "percentage") {
+      if (!Number.isFinite(val) || val <= 0 || val > 100) {
+        setError("Discount percentage must be between 1 and 100.");
+        return;
+      }
+    } else {
+      if (!Number.isFinite(val) || val <= 0) {
+        setError("Discount amount must be a positive number greater than 0.");
+        return;
+      }
     }
+
     const code = newCode.trim().toUpperCase();
     if (code && !/^[A-Z0-9]{3,20}$/.test(code)) {
       setError("Invalid code. Use 3–20 alphanumeric characters (A–Z and 0–9).");
       return;
     }
+
     setSaving(true);
     setError(null);
     try {
-      const body: { code?: string; discountPercent: number; expiresAt?: string } = { discountPercent: discount };
+      const body: {
+        code?: string;
+        discountType: "percentage" | "absolute";
+        discountPercent?: number;
+        discountAmount?: number;
+        expiresAt?: string;
+      } = {
+        discountType: newDiscountType,
+        ...(newDiscountType === "percentage" ? { discountPercent: val } : { discountAmount: val }),
+      };
       if (code) body.code = code;
       if (newExpiresAt.trim()) {
         body.expiresAt = newExpiresAt.trim();
@@ -94,7 +116,7 @@ export default function CouponsPage() {
         throw new Error(resp.error || "Failed to create coupon");
       }
       setNewCode("");
-      setNewDiscountPercent("");
+      setNewDiscountValue("");
       setNewExpiresAt("");
       loadCoupons();
     } catch (err: unknown) {
@@ -162,7 +184,7 @@ export default function CouponsPage() {
       <section className="mb-8 p-6 rounded-lg bg-white border border-[#e2e8f0] shadow-sm max-w-xl">
         <h2 className="text-lg font-semibold text-[#2d3748] mb-2">Create coupon</h2>
         <p className="text-sm text-[#718096] mb-4">
-          Enter a custom code (recommended) or leave it empty to auto-generate. Discount is a percentage. Expiry is optional.
+          Enter a custom code or leave empty to auto-generate. Choose between percentage or flat absolute value discount.
         </p>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -190,19 +212,68 @@ export default function CouponsPage() {
               </div>
               <p className="mt-1 text-xs text-[#718096]">Allowed: 3–20 alphanumeric characters (A–Z and 0–9).</p>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-[#4a5568] mb-1">Discount (%)</label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={newDiscountPercent}
-                onChange={(e) => setNewDiscountPercent(e.target.value)}
-                required
-                readOnly={!canEdit}
-                className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none disabled:bg-[#f8f9fa] disabled:opacity-70"
-              />
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-[#4a5568] mb-1">Discount Type</label>
+              <div className="inline-flex rounded-lg border border-[#e2e8f0] p-1 bg-[#f8fafc] w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewDiscountType("percentage");
+                    setNewDiscountValue("");
+                  }}
+                  className={`flex-1 sm:flex-initial px-4 py-1.5 text-xs font-medium rounded-md transition ${
+                    newDiscountType === "percentage"
+                      ? "bg-white text-[#4059ad] shadow-sm font-semibold border border-[#e2e8f0]"
+                      : "text-[#718096] hover:text-[#2d3748]"
+                  }`}
+                >
+                  Percentage (%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewDiscountType("absolute");
+                    setNewDiscountValue("");
+                  }}
+                  className={`flex-1 sm:flex-initial px-4 py-1.5 text-xs font-medium rounded-md transition ${
+                    newDiscountType === "absolute"
+                      ? "bg-white text-[#4059ad] shadow-sm font-semibold border border-[#e2e8f0]"
+                      : "text-[#718096] hover:text-[#2d3748]"
+                  }`}
+                >
+                  Absolute Value (₹)
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-[#718096]">
+                {newDiscountType === "percentage"
+                  ? "Reduces payable amount by a percentage (e.g. 20% off)."
+                  : "Reduces payable amount by a fixed absolute amount (e.g. ₹500 flat off)."}
+              </p>
             </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#4a5568] mb-1">
+                {newDiscountType === "percentage" ? "Discount Percentage (%)" : "Discount Amount (₹ Flat)"}
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={1}
+                  max={newDiscountType === "percentage" ? 100 : undefined}
+                  value={newDiscountValue}
+                  onChange={(e) => setNewDiscountValue(e.target.value)}
+                  required
+                  readOnly={!canEdit}
+                  placeholder={newDiscountType === "percentage" ? "e.g. 20" : "e.g. 500"}
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none disabled:bg-[#f8f9fa] disabled:opacity-70"
+                />
+                <span className="absolute right-3 top-2 text-xs font-semibold text-[#718096]">
+                  {newDiscountType === "percentage" ? "%" : "₹"}
+                </span>
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-[#4a5568] mb-1">Expiry (optional)</label>
               <input
@@ -252,8 +323,18 @@ export default function CouponsPage() {
                   const statusColor = !c.active ? "text-red-600" : expired ? "text-amber-600" : "text-emerald-600";
                   return (
                     <tr key={c.code} className="border-b border-[#edf2f7]">
-                      <td className="py-2 px-3 font-mono text-[#2d3748]">{c.code}</td>
-                      <td className="py-2 px-3 text-[#2d3748]">{c.discountPercent}%</td>
+                      <td className="py-2 px-3 font-mono text-[#2d3748] font-semibold">{c.code}</td>
+                      <td className="py-2 px-3 text-[#2d3748]">
+                        {c.discountType === "absolute" ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            -₹{c.discountAmount || 0} Flat
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                            {c.discountPercent || 0}% Off
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-[#4a5568]">{formatDate(c.expiresAt ?? null)}</td>
                       <td className="py-2 px-3">
                         <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
