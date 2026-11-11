@@ -42,9 +42,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const freeScanUserIds = Array.isArray(franchiseData.freeScanUserIds) ? franchiseData.freeScanUserIds : [];
+    const usedCredits = freeScanUserIds.length > 0 ? freeScanUserIds.length : (typeof franchiseData.usedCredits === "number" ? franchiseData.usedCredits : 0);
+    const creditLimit = typeof franchiseData.creditLimit === "number" ? franchiseData.creditLimit : 5;
+
     return NextResponse.json({
       id: doc.id,
       ...franchiseData,
+      creditLimit,
+      usedCredits,
       referralCount,
       referredUsers,
     });

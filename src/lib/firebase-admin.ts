@@ -22,7 +22,14 @@ function getAdminApp(): admin.app.App {
       `FIREBASE_SERVICE_ACCOUNT_JSON is invalid (${msg}). Paste the full JSON on one line in .env.local with no ... or truncation.`
     );
   }
-  return admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  const storageBucket =
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+    "dmit-f7423.appspot.com";
+  return admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket,
+  });
 }
 
 export function getFirebaseAdmin(): admin.app.App {
@@ -31,6 +38,10 @@ export function getFirebaseAdmin(): admin.app.App {
 
 export function getFirestore(): admin.firestore.Firestore {
   return getFirebaseAdmin().firestore();
+}
+
+export function getStorage(): admin.storage.Storage {
+  return getFirebaseAdmin().storage();
 }
 
 export function getAuth(): admin.auth.Auth {

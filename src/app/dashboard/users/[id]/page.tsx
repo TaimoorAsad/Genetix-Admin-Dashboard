@@ -13,6 +13,9 @@ type UserData = Record<string, unknown> & {
   isEliteMember?: boolean;
   ReferralCount?: number;
   ReferralPoints?: number;
+  "Customer Type"?: string;
+  customerType?: string;
+  userType?: string;
 };
 
 export default function UserDetailPage() {
@@ -41,6 +44,7 @@ export default function UserDetailPage() {
           isEliteMember: data.isEliteMember,
           ReferralCount: data.ReferralCount,
           ReferralPoints: data.ReferralPoints,
+          "Customer Type": data["Customer Type"] || data.customerType || data.userType || "",
         });
       })
       .catch(() => setError("User not found"))
@@ -138,6 +142,26 @@ export default function UserDetailPage() {
             readOnly={!canEdit}
             className="w-full rounded-lg bg-white border border-[#e2e8f0] px-4 py-2.5 text-[#2d3748] placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none disabled:opacity-70 disabled:bg-[#f8f9fa]"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#2d3748] mb-1">Customer / User Type</label>
+          <select
+            value={String(form["Customer Type"] ?? "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              "Customer Type": e.target.value,
+              customerType: e.target.value,
+              userType: e.target.value,
+            }))}
+            disabled={!canEdit}
+            className="w-full rounded-lg bg-white border border-[#e2e8f0] px-4 py-2.5 text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none disabled:opacity-70 disabled:bg-[#f8f9fa]"
+          >
+            <option value="">Not Specified</option>
+            <option value="Student">Student</option>
+            <option value="Parent">Parent</option>
+            <option value="Teacher">Teacher</option>
+            <option value="Professional">Professional</option>
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-[#2d3748] mb-1">Phone (read-only)</label>

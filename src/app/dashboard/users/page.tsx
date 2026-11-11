@@ -18,6 +18,9 @@ type UserRow = {
   Franchise?: string;
   LoginCount?: number;
   imageStatus?: ImageStatus;
+  "Customer Type"?: string;
+  customerType?: string;
+  userType?: string;
 };
 
 type FranchiseRow = { id: string; number?: string; name?: string };
@@ -91,6 +94,22 @@ function UserStatusBadge({ status }: { status: ImageStatus }) {
   );
 }
 
+function CustomerTypeBadge({ type }: { type?: string }) {
+  const clean = (type ?? "").trim();
+  if (!clean) return <span className="text-[#cbd5e0] text-xs">—</span>;
+  const lower = clean.toLowerCase();
+  let badgeClass = "bg-purple-50 text-purple-700 border-purple-200";
+  if (lower === "student") badgeClass = "bg-blue-50 text-blue-700 border-blue-200";
+  else if (lower === "parent") badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+  else if (lower === "teacher") badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+  else if (lower === "professional") badgeClass = "bg-indigo-50 text-indigo-700 border-indigo-200";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${badgeClass}`}>
+      {clean}
+    </span>
+  );
+}
+
 const SEARCH_DEBOUNCE_MS = 350;
 
 type PageSize = "all" | "50" | "100" | "500";
@@ -109,6 +128,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageFilter, setImageFilter] = useState<ImageStatus | "all-users">("all-users");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all-types");
   const [pageSize, setPageSize] = useState<PageSize>("50");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -123,6 +143,7 @@ export default function UsersPage() {
     isEliteMember: false,
     referralCode: "",
     franchise: "",
+    customerType: "",
   });
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -144,6 +165,7 @@ export default function UsersPage() {
       const headers = [
         "User ID",
         "Full Name",
+        "Customer Type",
         "Phone Number",
         "Email",
         "Registered On",
@@ -185,6 +207,7 @@ export default function UsersPage() {
         const row = [
           escapeCSV(u.id),
           escapeCSV(u["Full Name"]),
+          escapeCSV(u["Customer Type"] || u.customerType || u.userType || ""),
           escapeCSV(u["Phone Number"]),
           escapeCSV(u.Email),
           escapeCSV(u["Registered On"]),
@@ -251,6 +274,7 @@ export default function UsersPage() {
           isEliteMember: addForm.isEliteMember,
           ReferralCode: addForm.referralCode.trim(),
           Franchise: addForm.franchise.trim(),
+          "Customer Type": addForm.customerType.trim(),
         }),
       });
       if (!res.ok) {
@@ -264,6 +288,7 @@ export default function UsersPage() {
         isEliteMember: false,
         referralCode: "",
         franchise: "",
+        customerType: "",
       });
       setShowAddModal(false);
       await load(currentPage);
@@ -302,7 +327,12 @@ export default function UsersPage() {
     }
   };
 
-  const displayUsers = searchResults !== null ? searchResults : users;
+  const rawUsers = searchResults !== null ? searchResults : users;
+  const displayUsers = rawUsers.filter((u) => {
+    if (customerTypeFilter === "all-types") return true;
+    const ct = String(u["Customer Type"] || u.customerType || u.userType || "").toLowerCase();
+    return ct === customerTypeFilter.toLowerCase();
+  });
 
   useEffect(() => {
     if (!idToken) return;
@@ -505,6 +535,18 @@ export default function UsersPage() {
             <option value="none">No Images (Red)</option>
           </select>
           <select
+            value={customerTypeFilter}
+            onChange={(e) => setCustomerTypeFilter(e.target.value)}
+            className="w-full md:w-auto px-4 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#2d3748] text-sm focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none md:min-w-[170px]"
+            aria-label="Filter by role"
+          >
+            <option value="all-types">All Roles / Types</option>
+            <option value="student">Student</option>
+            <option value="parent">Parent</option>
+            <option value="teacher">Teacher</option>
+            <option value="professional">Professional</option>
+          </select>
+          <select
             value={pageSize}
             onChange={(e) => {
               setPageSize(e.target.value as PageSize);
@@ -564,7 +606,10 @@ export default function UsersPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="font-medium text-[#2d3748] text-sm truncate">{u["Full Name"] ?? "—"}</p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-medium text-[#2d3748] text-sm truncate">{u["Full Name"] ?? "—"}</p>
+                        <CustomerTypeBadge type={u["Customer Type"] || u.customerType || u.userType} />
+                      </div>
                       <UserStatusBadge status={status} />
                     </div>
                     {u["Phone Number"] && (
@@ -630,15 +675,16 @@ export default function UsersPage() {
           <table className="w-full text-left table-fixed">
             <colgroup>
               <col style={{ width: "3%" }} />
-              <col style={{ width: "6%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "4%" }} />
               <col style={{ width: "5%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "5%" }} />
+              <col style={{ width: "12%" }} />
               <col style={{ width: "9%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "4%" }} />
+              <col style={{ width: "4%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "5%" }} />
+              <col style={{ width: "8%" }} />
               <col style={{ width: "9%" }} />
             </colgroup>
             <thead className="bg-[#f8f9fa] border-b border-[#e2e8f0]">
@@ -663,6 +709,7 @@ export default function UsersPage() {
                 </th>
                 <th className="px-3 py-2.5 font-semibold text-[#2d3748] text-xs">Status</th>
                 <th className="px-3 py-2.5 font-semibold text-[#2d3748] text-xs">Name</th>
+                <th className="px-3 py-2.5 font-semibold text-[#2d3748] text-xs">Role / Type</th>
                 <th className="px-3 py-2.5 font-semibold text-[#2d3748] text-xs">Phone</th>
                 <th className="px-3 py-2.5 font-semibold text-[#2d3748] text-xs">Email</th>
                 <th className="px-3 py-2.5 font-semibold text-[#2d3748] text-xs">Elite</th>
@@ -701,6 +748,9 @@ export default function UsersPage() {
                       <UserStatusBadge status={status} />
                     </td>
                     <td className="px-3 py-2.5 text-[#2d3748] font-medium text-sm truncate" title={String(u["Full Name"] ?? "")}>{u["Full Name"] ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-xs">
+                      <CustomerTypeBadge type={u["Customer Type"] || u.customerType || u.userType} />
+                    </td>
                     <td className="px-3 py-2.5 text-[#718096] text-sm truncate" title={String(u["Phone Number"] ?? "")}>{u["Phone Number"] ?? "—"}</td>
                     <td className="px-3 py-2.5 text-[#718096] text-sm truncate" title={String(u.Email ?? "")}>{u.Email ?? "—"}</td>
                     <td className="px-3 py-2.5 text-sm">
@@ -873,6 +923,20 @@ export default function UsersPage() {
                   onChange={(e) => setAddForm((prev) => ({ ...prev, email: e.target.value }))}
                 />
                 <p className="text-[10px] text-[#a0aec0] mt-0.5">Required if phone number is empty.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">Customer / User Type (optional)</label>
+                <select
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-sm text-[#2d3748] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none"
+                  value={addForm.customerType}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, customerType: e.target.value }))}
+                >
+                  <option value="">Not Specified</option>
+                  <option value="Student">Student</option>
+                  <option value="Parent">Parent</option>
+                  <option value="Teacher">Teacher</option>
+                  <option value="Professional">Professional</option>
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

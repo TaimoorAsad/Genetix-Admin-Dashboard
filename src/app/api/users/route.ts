@@ -48,7 +48,8 @@ function userMatchesSearch(data: Record<string, unknown>, query: string): boolea
   const name = String(data["Full Name"] ?? "").toLowerCase();
   const email = String(data.Email ?? "").toLowerCase();
   const phone = String(data["Phone Number"] ?? "").toLowerCase();
-  return name.includes(q) || email.includes(q) || phone.includes(q);
+  const customerType = String(data["Customer Type"] ?? data["customerType"] ?? data["userType"] ?? "").toLowerCase();
+  return name.includes(q) || email.includes(q) || phone.includes(q) || customerType.includes(q);
 }
 
 function registeredOnMs(val: unknown): number {
@@ -228,6 +229,7 @@ export async function POST(req: NextRequest) {
     const isEliteMember = Boolean(body.isEliteMember);
     const referralCode = String(body.ReferralCode ?? "").trim();
     const franchise = String(body.Franchise ?? "").trim();
+    const customerType = String(body["Customer Type"] ?? body.customerType ?? "").trim();
 
     if (!email && !phoneNumber) {
       return NextResponse.json({ error: "At least Email or Phone Number is required" }, { status: 400 });
@@ -251,6 +253,9 @@ export async function POST(req: NextRequest) {
       ReferralPoints: 0,
       ReferralCode: referralCode,
       Franchise: franchise,
+      "Customer Type": customerType,
+      customerType: customerType,
+      userType: customerType,
       LoginCount: 0,
       welcomeMessageSent: false,
     };

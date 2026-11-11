@@ -28,6 +28,9 @@ type UserInfo = {
   "Date of Birth"?: string;
   "Time of Birth"?: string;
   "Registered On"?: string;
+  "Customer Type"?: string;
+  customerType?: string;
+  userType?: string;
   Franchise?: string;
   ReferralCode?: string;
   ReferralCount?: number;
@@ -264,6 +267,7 @@ export default function UserFingerprintsPage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
             <InfoRow label="Full Name" value={userInfo["Full Name"]} />
+            <InfoRow label="Customer Type" value={userInfo["Customer Type"] || userInfo.customerType || userInfo.userType} />
             <InfoRow label="Phone Number" value={userInfo["Phone Number"]} />
             <InfoRow label="Email" value={userInfo.Email} />
             <InfoRow label="Gender" value={typeof userInfo.Gender === "string" ? userInfo.Gender : undefined} />

@@ -13,6 +13,8 @@ type Franchise = {
   referredUsers?: ReferredUser[];
   canEditFranchiseUsers?: boolean;
   canDeleteFranchiseUsers?: boolean;
+  creditLimit?: number;
+  usedCredits?: number;
   [key: string]: unknown;
 };
 
@@ -31,6 +33,7 @@ export default function MyFranchisePage() {
     "Phone Number": "",
     Gender: "",
     Education: "",
+    "Customer Type": "",
     "Father's Name": "",
     "Mother's Name": "",
     "Place of Birth": "",
@@ -78,6 +81,7 @@ export default function MyFranchisePage() {
       "Phone Number": "",
       Gender: "",
       Education: "",
+      "Customer Type": "",
       "Father's Name": "",
       "Mother's Name": "",
       "Place of Birth": "",
@@ -97,6 +101,7 @@ export default function MyFranchisePage() {
           "Phone Number": String(data["Phone Number"] ?? ""),
           Gender: String(data.Gender ?? ""),
           Education: String(data.Education ?? ""),
+          "Customer Type": String(data["Customer Type"] ?? data.customerType ?? data.userType ?? ""),
           "Father's Name": String(data["Father's Name"] ?? ""),
           "Mother's Name": String(data["Mother's Name"] ?? ""),
           "Place of Birth": String(data["Place of Birth"] ?? ""),
@@ -202,11 +207,16 @@ export default function MyFranchisePage() {
           </div>
 
           <div className="rounded-lg bg-white border border-[#e2e8f0] shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[#2d3748]">Referrals</h2>
-              <span className="px-3 py-1 rounded-full bg-[#4059ad]/10 text-[#4059ad] text-sm font-semibold">
-                {franchise.referralCount ?? 0} total
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2 className="text-lg font-semibold text-[#2d3748]">Referrals & Quota</h2>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                  Free 10-Finger Scans: {franchise.usedCredits ?? 0} / {typeof franchise.creditLimit === "number" ? franchise.creditLimit : 5} clients used
+                </span>
+                <span className="px-3 py-1 rounded-full bg-[#4059ad]/10 text-[#4059ad] text-xs font-semibold">
+                  {franchise.referralCount ?? 0} total referrals
+                </span>
+              </div>
             </div>
 
             {(franchise.referredUsers?.length ?? 0) === 0 ? (
@@ -285,6 +295,7 @@ export default function MyFranchisePage() {
                   ["Phone Number", "Phone Number"],
                   ["Gender", "Gender"],
                   ["Education", "Education"],
+                  ["Customer Type", "Customer Type / Role"],
                   ["Father's Name", "Father's Name"],
                   ["Mother's Name", "Mother's Name"],
                   ["Place of Birth", "Place of Birth"],

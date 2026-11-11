@@ -13,12 +13,34 @@ export async function GET(req: NextRequest) {
     if (authResult.auth.role === "franchise" && authResult.auth.franchiseId) {
       const doc = await db.collection("Franchises").doc(authResult.auth.franchiseId).get();
       if (!doc.exists) return NextResponse.json({ error: "Franchise not found" }, { status: 404 });
-      return NextResponse.json({ franchises: [{ id: doc.id, ...doc.data() }] });
+      const data = doc.data()!;
+      const freeScanUserIds = Array.isArray(data.freeScanUserIds) ? data.freeScanUserIds : [];
+      const usedCredits = freeScanUserIds.length > 0 ? freeScanUserIds.length : (typeof data.usedCredits === "number" ? data.usedCredits : 0);
+      const creditLimit = typeof data.creditLimit === "number" ? data.creditLimit : 5;
+      return NextResponse.json({
+        franchises: [{
+          id: doc.id,
+          ...data,
+          creditLimit,
+          usedCredits,
+        }]
+      });
     }
     const viewErr = requireView(authResult.auth, "franchises");
     if (viewErr) return viewErr;
     const snapshot = await db.collection("Franchises").get();
-    const franchises = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const franchises = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const freeScanUserIds = Array.isArray(data.freeScanUserIds) ? data.freeScanUserIds : [];
+      const usedCredits = freeScanUserIds.length > 0 ? freeScanUserIds.length : (typeof data.usedCredits === "number" ? data.usedCredits : 0);
+      const creditLimit = typeof data.creditLimit === "number" ? data.creditLimit : 5;
+      return {
+        id: doc.id,
+        ...data,
+        creditLimit,
+        usedCredits,
+      };
+    });
     return NextResponse.json({ franchises });
   } catch (e) {
     console.error(e);
@@ -33,7 +55,7 @@ export async function POST(req: NextRequest) {
   if (permErr) return permErr;
   const db = getFirestore();
   const body = await req.json();
-  const { number, name, email, password, ...rest } = body;
+  const { number, name, email, password, creditLimit, ...rest } = body;
   if (!number) return NextResponse.json({ error: "number is required" }, { status: 400 });
 
   const cleanPassword = typeof password === "string" ? password.trim() : "";
@@ -43,11 +65,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email is required to create a login account for this franchise." }, { status: 400 });
   }
 
+  const parsedCreditLimit = typeof creditLimit === "number" && !isNaN(creditLimit) && creditLimit >= 0
+    ? creditLimit
+    : (parseInt(String(creditLimit), 10) >= 0 ? parseInt(String(creditLimit), 10) : 5);
+
   try {
     const franchiseData = {
       number: String(number),
       name: name || "",
       email: cleanEmail || null,
+      creditLimit: parsedCreditLimit,
+      freeScanUserIds: [],
+      usedCredits: 0,
       ...rest
     };
 

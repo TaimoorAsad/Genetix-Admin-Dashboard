@@ -11,6 +11,9 @@ type Franchise = {
   phone?: string;
   canEditFranchiseUsers?: boolean;
   canDeleteFranchiseUsers?: boolean;
+  creditLimit?: number;
+  usedCredits?: number;
+  freeScanUserIds?: string[];
   [key: string]: unknown;
 };
 
@@ -21,6 +24,7 @@ type EditForm = {
   phone: string;
   canEditFranchiseUsers: boolean;
   canDeleteFranchiseUsers: boolean;
+  creditLimit: number;
   password?: string;
 };
 
@@ -42,6 +46,7 @@ export default function FranchisesPage() {
     password: "",
     canEditFranchiseUsers: false,
     canDeleteFranchiseUsers: false,
+    creditLimit: 5,
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -55,6 +60,7 @@ export default function FranchisesPage() {
     password: "",
     canEditFranchiseUsers: false,
     canDeleteFranchiseUsers: false,
+    creditLimit: 5,
   });
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -80,6 +86,7 @@ export default function FranchisesPage() {
           password: addForm.password.trim() || null,
           canEditFranchiseUsers: addForm.canEditFranchiseUsers,
           canDeleteFranchiseUsers: addForm.canDeleteFranchiseUsers,
+          creditLimit: Number(addForm.creditLimit),
         }),
       });
       if (!res.ok) {
@@ -94,6 +101,7 @@ export default function FranchisesPage() {
         password: "",
         canEditFranchiseUsers: false,
         canDeleteFranchiseUsers: false,
+        creditLimit: 5,
       });
       setShowAddModal(false);
       load();
@@ -127,6 +135,7 @@ export default function FranchisesPage() {
       password: "",
       canEditFranchiseUsers: Boolean(f.canEditFranchiseUsers),
       canDeleteFranchiseUsers: Boolean(f.canDeleteFranchiseUsers),
+      creditLimit: typeof f.creditLimit === "number" ? f.creditLimit : 5,
     });
     setSaveError(null);
   };
@@ -152,6 +161,7 @@ export default function FranchisesPage() {
           password: editForm.password ? editForm.password.trim() : null,
           canEditFranchiseUsers: editForm.canEditFranchiseUsers,
           canDeleteFranchiseUsers: editForm.canDeleteFranchiseUsers,
+          creditLimit: Number(editForm.creditLimit),
         }),
       });
       if (!res.ok) {
@@ -226,6 +236,7 @@ export default function FranchisesPage() {
                 <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm">Number / Referral code</th>
                 <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm">Name</th>
                 <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm">Email</th>
+                <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm whitespace-nowrap">Free Scans (Limit)</th>
                 <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm whitespace-nowrap">Franchise may edit users</th>
                 <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm whitespace-nowrap">Franchise may delete users</th>
                 <th className="px-6 py-4 font-semibold text-[#2d3748] text-sm">Actions</th>
@@ -238,6 +249,16 @@ export default function FranchisesPage() {
                     <td className="px-6 py-4 text-[#2d3748] font-mono font-medium">{f.number ?? "—"}</td>
                     <td className="px-6 py-4 text-[#718096]">{f.name ?? "—"}</td>
                     <td className="px-6 py-4 text-[#718096] text-sm">{(f.email as string) || "—"}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-[#2d3748]">
+                          {typeof f.creditLimit === "number" ? f.creditLimit : 5}
+                        </span>
+                        <span className="text-xs text-[#718096]">
+                          ({f.usedCredits ?? (Array.isArray(f.freeScanUserIds) ? f.freeScanUserIds.length : 0)} used)
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-[#718096] text-sm">{f.canEditFranchiseUsers ? "Yes" : "No"}</td>
                     <td className="px-6 py-4 text-[#718096] text-sm">{f.canDeleteFranchiseUsers ? "Yes" : "No"}</td>
                     <td className="px-6 py-4">
@@ -264,7 +285,7 @@ export default function FranchisesPage() {
                   </tr>
                   {editingId === f.id && (
                     <tr key={`${f.id}-edit`} className="bg-[#f8faff] border-t border-[#4059ad]/20">
-                      <td colSpan={6} className="px-6 py-4">
+                      <td colSpan={7} className="px-6 py-4">
                         <div className="max-w-2xl space-y-3">
                           <p className="text-xs font-semibold text-[#4059ad] uppercase tracking-wide mb-2">Edit franchise</p>
                           <div className="grid grid-cols-2 gap-3">
@@ -306,6 +327,19 @@ export default function FranchisesPage() {
                                 onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                                 className={inputCls}
                                 placeholder="+923001234567"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-[#718096] mb-1">
+                                Free 10-Finger Scans Limit (Clients allowed full scan)
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={editForm.creditLimit}
+                                onChange={(e) => setEditForm((f) => ({ ...f, creditLimit: parseInt(e.target.value, 10) || 0 }))}
+                                className={inputCls}
+                                placeholder="Default: 5"
                               />
                             </div>
                             <div>
@@ -430,6 +464,21 @@ export default function FranchisesPage() {
                   value={addForm.phone}
                   onChange={(e) => setAddForm((prev) => ({ ...prev, phone: e.target.value }))}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#718096] mb-1">
+                  Free 10-Finger Scans Limit (Default: 5)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className={inputCls}
+                  value={addForm.creditLimit}
+                  onChange={(e) => setAddForm((prev) => ({ ...prev, creditLimit: parseInt(e.target.value, 10) || 0 }))}
+                />
+                <p className="text-[10px] text-[#a0aec0] mt-0.5">
+                  Max number of clients under this franchise who can capture all 10 fingerprints for free.
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-[#718096] mb-1">Password (to allow dashboard login)</label>

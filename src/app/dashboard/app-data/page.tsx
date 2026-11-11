@@ -31,6 +31,10 @@ type AppDataDoc = {
   fingerprintHelpVideos?: { title?: string; videoId?: string; videoUrl?: string }[];
   /** Buy Elite screen — "Use Code" banner (appData/Settings.elitePromoCode) */
   elitePromoCode?: string;
+  /** Sample report shown in app Home -> My Reports (appData/Settings.sampleReportUrl) */
+  sampleReportUrl?: string;
+  sampleReportTitle?: string;
+  sampleReportFileName?: string;
   [key: string]: unknown;
 };
 
@@ -89,6 +93,11 @@ export default function AppDataPage() {
   const [supportHelpVideoRows, setSupportHelpVideoRows] = useState<HelpVideoRow[]>(() => [...DEFAULT_HELP_VIDEO_ROWS]);
   const [fingerprintHelpVideoRows, setFingerprintHelpVideoRows] = useState<HelpVideoRow[]>(() => [...DEFAULT_HELP_VIDEO_ROWS]);
   const [savingHelpVideos, setSavingHelpVideos] = useState(false);
+  const [sampleReportUrl, setSampleReportUrl] = useState("");
+  const [sampleReportTitle, setSampleReportTitle] = useState("");
+  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [savingSampleReport, setSavingSampleReport] = useState(false);
 
   const load = useCallback(() => {
     if (!idToken) return;
@@ -108,6 +117,8 @@ export default function AppDataPage() {
         setQualityImageUrls(imgs);
         setSupportHelpVideoRows(parseHelpVideoRows(settingsData.supportHelpVideos));
         setFingerprintHelpVideoRows(parseHelpVideoRows(settingsData.fingerprintHelpVideos));
+        setSampleReportUrl(String(settingsData.sampleReportUrl || ""));
+        setSampleReportTitle(String(settingsData.sampleReportTitle || ""));
       })
       .catch(() => setError("Failed to load app data"))
       .finally(() => setLoading(false));
@@ -192,6 +203,72 @@ export default function AppDataPage() {
   const handleRemoveItem = (index: number) => {
     if (!canEdit) return;
     setPlaylistItems(playlistItems.filter((_, i) => i !== index));
+  };
+
+  const saveSampleReportUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!idToken) return;
+    setSavingSampleReport(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/app-data", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          docId: NOTIFICATION_EMAIL_DOC_ID,
+          sampleReportUrl: sampleReportUrl.trim(),
+          sampleReportTitle: sampleReportTitle.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save sample report");
+      const data = await res.json();
+      setNotificationEmailDoc(data);
+      alert("Sample report settings saved successfully!");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save sample report");
+    } finally {
+      setSavingSampleReport(false);
+    }
+  };
+
+  const handleUploadSampleReportPdf = async () => {
+    if (!selectedPdfFile || !idToken) return;
+    setUploadingPdf(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedPdfFile);
+      if (sampleReportTitle.trim()) {
+        formData.append("title", sampleReportTitle.trim());
+      }
+      const res = await fetch("/api/app-data/upload-sample-report", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Failed to upload PDF");
+      }
+      const data = await res.json();
+      setSampleReportUrl(data.sampleReportUrl || "");
+      setSelectedPdfFile(null);
+      setNotificationEmailDoc((prev) =>
+        prev
+          ? {
+              ...prev,
+              sampleReportUrl: data.sampleReportUrl,
+              sampleReportTitle: data.sampleReportTitle,
+              sampleReportFileName: data.sampleReportFileName,
+            }
+          : null
+      );
+      alert("Sample report PDF uploaded and updated successfully!");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingPdf(false);
+    }
   };
 
   const saveNotificationEmail = async (e: React.FormEvent) => {
@@ -491,6 +568,141 @@ export default function AppDataPage() {
               </button>
             )}
           </form>
+        </section>
+
+        {/* ── Sample Report PDF Section (Mobile App "My Reports") ── */}
+        <section className="p-6 rounded-lg bg-white border border-[#e2e8f0] shadow-sm md:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1 px-2 bg-indigo-50 text-[#4059ad] rounded-md font-semibold text-[11px] tracking-wider uppercase">
+                  Mobile App &quot;My Reports&quot;
+                </span>
+                <span className="text-xs text-[#718096]">appData/Settings.sampleReportUrl</span>
+              </div>
+              <h2 className="text-lg font-semibold text-[#2d3748] mt-1.5">
+                Sample Report PDF Configuration
+              </h2>
+            </div>
+            {notificationEmailDoc?.sampleReportUrl ? (
+              <a
+                href={notificationEmailDoc.sampleReportUrl as string}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-medium border border-emerald-200 transition shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                View / Download Active Sample Report
+              </a>
+            ) : (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                Using default bundled PDF asset
+              </span>
+            )}
+          </div>
+
+          <p className="text-[#718096] text-xs mb-5 leading-relaxed">
+            Configure or upload the sample report PDF that is opened when mobile app users tap <strong>&quot;My Reports&quot;</strong> on the Home screen.
+            Whenever you upload a new PDF or save a new URL here, the mobile application will automatically fetch and display it for all users.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3 border-t border-[#edf2f7]">
+            {/* Option 1: Direct File Upload */}
+            <div className="space-y-3 bg-[#f8fafc] p-4 rounded-lg border border-[#e2e8f0]">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#4059ad] text-[10px] font-bold text-white">
+                  1
+                </span>
+                <h3 className="text-xs font-semibold text-[#4a5568] uppercase tracking-wider">
+                  Upload PDF File Directly
+                </h3>
+              </div>
+              <p className="text-xs text-[#718096]">
+                Upload your latest sample DMIT report (.pdf) to Firebase Storage.
+              </p>
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                disabled={!canEdit || uploadingPdf}
+                onChange={(e) => setSelectedPdfFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-[#4a5568] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#4059ad] file:text-white hover:file:bg-[#344a8a] file:cursor-pointer"
+              />
+              {selectedPdfFile && (
+                <div className="text-xs text-[#2d3748] bg-white p-2.5 rounded-lg border border-[#cbd5e0] flex items-center justify-between shadow-xs">
+                  <span className="truncate max-w-[220px] font-medium">{selectedPdfFile.name}</span>
+                  <span className="text-[#718096] text-[11px]">{(selectedPdfFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                </div>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleUploadSampleReportPdf}
+                  disabled={!selectedPdfFile || uploadingPdf}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#4059ad] hover:bg-[#344a8a] text-white text-xs font-medium disabled:opacity-50 shadow-sm transition flex items-center justify-center gap-2"
+                >
+                  {uploadingPdf ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading &amp; Setting Sample Report...
+                    </>
+                  ) : (
+                    "Upload & Set Sample Report PDF"
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Option 2: Custom URL */}
+            <form onSubmit={saveSampleReportUrl} className="space-y-3 bg-[#f8fafc] p-4 rounded-lg border border-[#e2e8f0]">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2b6cb0] text-[10px] font-bold text-white">
+                  2
+                </span>
+                <h3 className="text-xs font-semibold text-[#4a5568] uppercase tracking-wider">
+                  Or Paste Sample Report URL
+                </h3>
+              </div>
+              <p className="text-xs text-[#718096]">
+                Provide an existing public PDF link (Firebase Storage, Google Drive, or CDN).
+              </p>
+              <div>
+                <label className="block text-[11px] font-medium text-[#718096] mb-1">Report PDF URL</label>
+                <input
+                  type="url"
+                  value={sampleReportUrl}
+                  onChange={(e) => setSampleReportUrl(e.target.value)}
+                  placeholder="https://firebasestorage.googleapis.com/... or https://..."
+                  readOnly={!canEdit}
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-[#2d3748] text-xs placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none disabled:opacity-70 disabled:bg-[#f8f9fa]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-[#718096] mb-1">Report Display Title (Optional)</label>
+                <input
+                  type="text"
+                  value={sampleReportTitle}
+                  onChange={(e) => setSampleReportTitle(e.target.value)}
+                  placeholder="e.g. Sample DMIT Comprehensive Report"
+                  readOnly={!canEdit}
+                  className="w-full rounded-lg bg-white border border-[#e2e8f0] px-3 py-2 text-[#2d3748] text-xs placeholder-[#a0aec0] focus:border-[#4059ad] focus:ring-2 focus:ring-[#4059ad]/20 outline-none disabled:opacity-70 disabled:bg-[#f8f9fa]"
+                />
+              </div>
+              {canEdit && (
+                <button
+                  type="submit"
+                  disabled={savingSampleReport}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#2b6cb0] hover:bg-[#2c5282] text-white text-xs font-medium disabled:opacity-50 shadow-sm transition"
+                >
+                  {savingSampleReport ? "Saving URL..." : "Save Sample Report URL"}
+                </button>
+              )}
+            </form>
+          </div>
         </section>
 
         <section className="p-6 rounded-lg bg-white border border-[#e2e8f0] shadow-sm">

@@ -21,6 +21,9 @@ const FRANCHISE_EDITABLE_USER_FIELDS = [
   "Date of Birth",
   "Time of Birth",
   "Profile Url",
+  "Customer Type",
+  "customerType",
+  "userType",
 ] as const;
 
 const STAFF_EDITABLE_USER_FIELDS = [
@@ -30,6 +33,9 @@ const STAFF_EDITABLE_USER_FIELDS = [
   "Gender",
   "Education",
   "Franchise",
+  "Customer Type",
+  "customerType",
+  "userType",
   "Phone Number",
   "Email",
   "Place of Birth",

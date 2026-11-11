@@ -12,7 +12,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const doc = await db.collection("Franchises").doc(id).get();
     if (!doc.exists) return NextResponse.json({ error: "Franchise not found" }, { status: 404 });
-    return NextResponse.json({ id: doc.id, ...doc.data() });
+    const data = doc.data()!;
+    const freeScanUserIds = Array.isArray(data.freeScanUserIds) ? data.freeScanUserIds : [];
+    const usedCredits = freeScanUserIds.length > 0 ? freeScanUserIds.length : (typeof data.usedCredits === "number" ? data.usedCredits : 0);
+    const creditLimit = typeof data.creditLimit === "number" ? data.creditLimit : 5;
+    return NextResponse.json({
+      id: doc.id,
+      ...data,
+      creditLimit,
+      usedCredits,
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Failed to fetch franchise" }, { status: 500 });
@@ -24,6 +33,7 @@ const ADMIN_FRANCHISE_PATCH_KEYS = [
   ...FRANCHISE_SELF_PATCH_KEYS,
   "canEditFranchiseUsers",
   "canDeleteFranchiseUsers",
+  "creditLimit",
 ] as const;
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -45,6 +55,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body[k] === undefined) continue;
     if (k === "canEditFranchiseUsers" || k === "canDeleteFranchiseUsers") {
       updates[k] = Boolean(body[k]);
+    } else if (k === "creditLimit") {
+      const num = Number(body[k]);
+      updates[k] = isNaN(num) || num < 0 ? 5 : num;
     } else if (k === "email" || k === "phone") {
       const v = body[k];
       updates[k] = typeof v === "string" && v.trim() === "" ? null : v;
