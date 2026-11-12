@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFirebaseAdmin, getFirestore, getStorage } from "@/lib/firebase-admin";
+import { getFirestore, getStorage } from "@/lib/firebase-admin";
 import { requireDashboardAuth, requirePermission } from "@/lib/api-auth";
 import crypto from "crypto";
 
